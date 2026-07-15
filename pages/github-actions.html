@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GitHub Actions CI/CD — doobeom Portfolio</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/theme.css" />
+  <link rel="stylesheet" href="../assets/css/nav.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="toc" aria-label="목차">
+      <p class="toc-label">Contents</p>
+      <nav>
+        <a href="#overview"><span class="num">01</span>Overview</a>
+        <a href="#architecture"><span class="num">02</span>전체 아키텍처</a>
+        <a href="#platform"><span class="num">03</span>공용 Actions</a>
+        <a href="#contracts"><span class="num">04</span>설정 · 인증</a>
+        <a href="#php"><span class="num">05</span>PHP</a>
+        <a href="#java"><span class="num">06</span>Java</a>
+        <a href="#python"><span class="num">07</span>Python</a>
+        <a href="#other"><span class="num">08</span>기타</a>
+        <a href="#highlights"><span class="num">09</span>하이라이트</a>
+      </nav>
+    </aside>
+
+    <div class="wrap">
+      <details class="toc-mobile">
+        <summary>목차</summary>
+        <nav>
+          <a href="#overview">01 · Overview</a>
+          <a href="#architecture">02 · 전체 아키텍처</a>
+          <a href="#platform">03 · 공용 Actions</a>
+          <a href="#contracts">04 · 설정 · 인증</a>
+          <a href="#php">05 · PHP</a>
+          <a href="#java">06 · Java</a>
+          <a href="#python">07 · Python</a>
+          <a href="#other">08 · 기타</a>
+          <a href="#highlights">09 · 하이라이트</a>
+        </nav>
+      </details>
+
+      <div class="hero" id="overview">
+        <h2>GitHub Actions로 설계한<br />Doobeom 배포 플랫폼</h2>
+        <p>
+          다수 서비스 레포를 동일한 계약으로 배포하기 위해 구축한 공용 Actions 라이브러리와
+          언어별(PHP · Java · Python) 파이프라인 패턴을 정리한 문서입니다.
+        </p>
+        <div class="chips">
+          <span class="chip">doobeom-sys/actions</span>
+          <span class="chip">doobeom-sys/actions-lambda</span>
+          <span class="chip">CodeDeploy · Lambda · ECR</span>
+          <span class="chip">Self-hosted Runner</span>
+        </div>
+      </div>
+
+      <div class="card-grid">
+        <div class="card"><strong>94</strong><span>Workflow 파일</span></div>
+        <div class="card"><strong>37</strong><span>연동 프로젝트</span></div>
+        <div class="card"><strong>34+</strong><span>공용 Custom Actions</span></div>
+        <div class="card"><strong>3</strong><span>주요 언어 축</span></div>
+      </div>
+
+      <section id="architecture">
+        <h3>2. 전체 아키텍처</h3>
+        <p>
+          서비스 workflow는 얇게 유지하고, 배포·알림·설정 조회는
+          <code>doobeom-sys/actions</code>로 추상화합니다.
+          환경별 설정은 SSM <code>/doobeom/{repo}/env/{env}</code>에서 읽습니다.
+        </p>
+        <div class="diagram">
+          <div class="diagram-label">플랫폼 개요</div>
+          <pre class="mermaid">
+flowchart TB
+  subgraph Trigger["트리거"]
+    WD["workflow_dispatch"]
+    SCH["schedule / cron"]
+    PUSH["push / tag / release"]
+  end
+  subgraph GHA["GitHub Actions"]
+    WF["서비스 Workflow"]
+    ACT["doobeom-sys/actions"]
+    ALA["doobeom-sys/actions-lambda"]
+    RUN["Self-hosted Runner"]
+  end
+  subgraph AWS["AWS"]
+    SSM["SSM Parameter Store"]
+    S3["S3 Artifact"]
+    CD["CodeDeploy"]
+    LMD["Lambda + Alias"]
+    ECR["ECR"]
+    SF["Step Functions to Batch"]
+  end
+  subgraph Notify["알림 / 버전"]
+    SLACK["Slack notify-deploy"]
+    TAG["Git Tag / Release"]
+  end
+  Trigger --> WF
+  WF --> RUN
+  WF --> ACT
+  WF --> ALA
+  ACT --> SSM
+  ACT --> S3
+  ACT --> CD
+  ALA --> LMD
+  WF --> ECR
+  ACT --> SF
+  ACT --> SLACK
+  ACT --> TAG
+  CD --> EC2["EC2 / App Server"]
+          </pre>
+        </div>
+        <div class="card-grid">
+          <div class="card">
+            <strong>설계 원칙</strong>
+            <span>환경별 workflow 분리 · workflow_dispatch 중심 · 설정은 SSM · 단계별 Slack</span>
+          </div>
+          <div class="card">
+            <strong>인증 · 권한</strong>
+            <span>OIDC Role Assume · GitHub Environments · Secrets Manager · Self-hosted</span>
+          </div>
+          <div class="card">
+            <strong>언어별 진입점</strong>
+            <span>PHP 웹 CodeDeploy · Java API/Batch/Android · Python 서버/Lambda</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="platform">
+        <h3>3. 공용 Actions 플랫폼</h3>
+        <p>
+          Composite(Bash)·Node.js 액션을 혼합해 SSM, S3, CodeDeploy, Slack, 태그를 표준화합니다.
+        </p>
+        <div class="callout">
+          최다 사용: <strong>notify-deploy</strong> → get-parameters → replace → create-deployment / check-deploy / upload-s3
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">배포 스테이지</div>
+          <pre class="mermaid">
+flowchart LR
+  A["get-parameters"] --> B["빌드 / 패키징"]
+  B --> C["create-appspec / replace"]
+  C --> D["upload-s3"]
+  D --> E["create-deployment"]
+  E --> F["check-deploy"]
+  F --> G["tag/create"]
+  G --> H["notify-deploy"]
+          </pre>
+        </div>
+        <div class="card-grid">
+          <div class="card"><strong>notify-deploy</strong><span>Slack 배포 알림</span></div>
+          <div class="card"><strong>get-parameters</strong><span>SSM 환경 JSON 조회</span></div>
+          <div class="card"><strong>replace</strong><span>스크립트 placeholder 치환</span></div>
+          <div class="card"><strong>create-deployment</strong><span>CodeDeploy 생성</span></div>
+          <div class="card"><strong>check-deploy</strong><span>배포 완료 폴링</span></div>
+          <div class="card"><strong>upload-s3</strong><span>아티팩트 업로드</span></div>
+          <div class="card"><strong>get-next-tag</strong><span>다음 태그 산출</span></div>
+          <div class="card"><strong>actions-lambda/*</strong><span>Alias · Layer · Code</span></div>
+          <div class="card"><strong>check-revision</strong><span>서버 해시 검증</span></div>
+          <div class="card"><strong>check-statuscode</strong><span>HTTP 헬스체크</span></div>
+        </div>
+      </section>
+
+      <section id="contracts">
+        <h3>4. 설정 · 인증 계약</h3>
+        <p>모든 언어 파이프라인이 공유하는 SSM / Secret / Runner 규약입니다.</p>
+        <table>
+          <tr><th>SSM 키</th><th>용도</th></tr>
+          <tr><td><code>bucket</code></td><td>배포 아티팩트 버킷</td></tr>
+          <tr><td><code>application_name</code></td><td>CodeDeploy Application</td></tr>
+          <tr><td><code>deploy_group_name</code></td><td>Deployment Group</td></tr>
+          <tr><td><code>install_path</code></td><td>서버 설치 경로</td></tr>
+          <tr><td><code>function_name</code></td><td>Lambda 함수명</td></tr>
+          <tr><td><code>php_version</code></td><td>Composer 런타임</td></tr>
+        </table>
+        <p class="muted">경로: <code>/doobeom/{repository}/env/{environment}</code></p>
+        <div class="card-grid">
+          <div class="card">
+            <strong>Runner</strong>
+            <span>운영 self-hosted · 일반 CI는 ubuntu-latest / windows / macos</span>
+          </div>
+          <div class="card">
+            <strong>Secrets</strong>
+            <span>ROLE(OIDC) · Slack Webhook · Package Token · Secrets Manager</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="php">
+        <h3>5. PHP</h3>
+        <p>
+          커머스·어드민·미디어 웹을 Composer로 패키징한 뒤 CodeDeploy로 EC2에 배포합니다.
+          호스트 단위(STG 슬롯)로 workflow를 분리해 동시 배포 충돌을 피합니다.
+        </p>
+        <div class="callout">
+          패턴: SSM → appspec/hooks 치환 → Composer install → ZIP → S3 → CodeDeploy + Tag + Slack
+        </div>
+        <div class="card-grid">
+          <div class="card">
+            <strong>커머스 웹 (Storefront)</strong>
+            <span><code>commerce/db-storefront-web</code> · prod/QA/STG www1~4 · php-fpm 재시작 옵션</span>
+          </div>
+          <div class="card">
+            <strong>어드민 웹</strong>
+            <span><code>commerce/db-admin-web</code> · admin1~4.stg · 동일 CodeDeploy 계약</span>
+          </div>
+          <div class="card">
+            <strong>미디어 웹</strong>
+            <span><code>media/db-media-web</code> · create-appspec · manual redeploy</span>
+          </div>
+        </div>
+        <h4 id="php-detail">Storefront Production 시퀀스</h4>
+        <div class="diagram">
+          <pre class="mermaid">
+sequenceDiagram
+  actor Ops as Operator
+  participant GHA as GitHub Actions
+  participant SSM as SSM
+  participant Comp as Composer
+  participant S3 as S3
+  participant CD as CodeDeploy
+  participant Slack as Slack
+  Ops->>GHA: workflow_dispatch
+  GHA->>GHA: checkout + OIDC
+  GHA->>SSM: get-parameters prod
+  SSM-->>GHA: install_path, bucket, php_version
+  GHA->>GHA: appspec / after.sh 치환
+  GHA->>Comp: composer install
+  GHA->>GHA: ZIP + commit hash
+  GHA->>S3: aws/s3/cp
+  GHA->>Slack: notify 1/2
+  GHA->>CD: create-deployment
+  GHA->>CD: check-deploy
+  GHA->>GHA: tag/create
+  GHA->>Slack: notify 2/2
+          </pre>
+        </div>
+      </section>
+
+      <section id="java">
+        <h3>6. Java</h3>
+        <p>
+          Gradle 기반 REST API·배치 워커·공유 라이브러리, Android 앱 빌드에 Actions를 사용합니다.
+          API는 CodeDeploy, Batch는 ECR 이미지와 Step Functions 실행을 분리합니다.
+        </p>
+        <div class="card-grid">
+          <div class="card">
+            <strong>REST API</strong>
+            <span>SSM → Gradle build → upload-s3 → CodeDeploy → update-version → Slack</span>
+          </div>
+          <div class="card">
+            <strong>API 서비스</strong>
+            <span>db-admin-api · db-fulfillment-api · db-library-api · tokyo 전용 포함</span>
+          </div>
+          <div class="card">
+            <strong>Batch</strong>
+            <span>이미지 publish와 submit-job 분리 · workflow_call 로그 Job</span>
+          </div>
+          <div class="card">
+            <strong>Android</strong>
+            <span>profile 선택 → OIDC/Secrets → Gradle + Fastlane</span>
+          </div>
+        </div>
+        <h4 id="java-detail">Batch 이미지 / Job 분리</h4>
+        <div class="diagram">
+          <pre class="mermaid">
+flowchart LR
+  subgraph Image["이미지 파이프라인"]
+    G[Gradle build] --> K[Secrets Manager JKS]
+    K --> D["docker buildx arm64+amd64"]
+    D --> E[ECR push]
+  end
+  subgraph Runtime["실행 파이프라인"]
+    I[dispatch inputs] --> SF[stepfunctions start]
+    SF --> BAT[AWS Batch]
+  end
+  Image --> N[notify-deploy]
+  Runtime --> N
+          </pre>
+        </div>
+      </section>
+
+      <section id="python">
+        <h3>7. Python</h3>
+        <p>
+          같은 Python이라도 <strong>서버 프로세스</strong>와 <strong>Lambda</strong>는
+          배포 대상·Job 구조·롤백 방식이 다릅니다.
+        </p>
+
+        <h4 id="py-compare">일반 vs Lambda 비교</h4>
+        <div class="callout">
+          공통: SSM → S3 → CodeDeploy → Slack.
+          차이: 서버 파일 교체 vs Alias 트래픽 전환, 2 Job vs 3 Job.
+        </div>
+        <table>
+          <tr><th>구분</th><th>일반 Python (서버)</th><th>Lambda Python</th></tr>
+          <tr><td>실행 환경</td><td>EC2 위 Python 앱 / ETL</td><td>Lambda + Alias</td></tr>
+          <tr><td>Job 구조</td><td>BuildAndUpload → Deploy</td><td>BuildAndUpload → PublishLambda → Deploy</td></tr>
+          <tr><td>아티팩트</td><td>앱 ZIP + appspec</td><td>함수 ZIP + Layer ZIP</td></tr>
+          <tr><td>CodeDeploy</td><td>bundleType Zip</td><td>bundleType YAML</td></tr>
+          <tr><td>트래픽</td><td>서버 교체 즉시</td><td>Job3에서만 Alias 전환</td></tr>
+          <tr><td>롤백</td><td>이전 ZIP 재배포</td><td>Alias를 이전 버전으로</td></tr>
+          <tr><td>대표</td><td>db-etl-flow · db-search · db-recommender</td><td>db-barcode-lambda · db-presignup-lambda</td></tr>
+        </table>
+        <div class="diagram">
+          <div class="diagram-label">분기 개요</div>
+          <pre class="mermaid">
+flowchart TB
+  subgraph Common["공통"]
+    T[workflow_dispatch] --> S[SSM get-parameters]
+    S --> U[S3 Upload]
+  end
+  subgraph Server["일반 Python"]
+    U --> Z1[앱 ZIP + appspec]
+    Z1 --> CD1[CodeDeploy Zip to EC2]
+  end
+  subgraph LambdaPath["Lambda Python"]
+    U --> Z2[code / layer ZIP]
+    Z2 --> PUB[PublishLambda Alias 유지]
+    PUB --> CD2[CodeDeploy YAML Alias 전환]
+  end
+  Common --> Server
+  Common --> LambdaPath
+          </pre>
+        </div>
+
+        <h4 id="py-server">① 일반 Python — 2 Job</h4>
+        <table>
+          <tr><th>Job</th><th>주요 Step</th><th>결과</th></tr>
+          <tr>
+            <td><code>BuildAndUpload</code></td>
+            <td>SSM · replace · ZIP · s3/cp · Slack 1/2</td>
+            <td>S3 배포 ZIP</td>
+          </tr>
+          <tr>
+            <td><code>Deploy</code></td>
+            <td>create-deployment · check-deploy · tag · Slack 2/2</td>
+            <td><code>install_path</code> 반영</td>
+          </tr>
+        </table>
+        <div class="diagram">
+          <pre class="mermaid">
+sequenceDiagram
+  actor Ops as Operator
+  participant GHA as GitHub Actions
+  participant SSM as SSM
+  participant S3 as S3
+  participant CD as CodeDeploy
+  participant EC2 as EC2 App
+  participant Slack as Slack
+  Ops->>GHA: workflow_dispatch
+  GHA->>SSM: get-parameters
+  GHA->>GHA: replace appspec / after.sh
+  GHA->>S3: aws/s3/cp
+  GHA->>Slack: notify 1/2
+  GHA->>CD: create-deployment Zip
+  CD->>EC2: hooks
+  GHA->>CD: check-deploy
+  GHA->>Slack: notify 2/2
+          </pre>
+        </div>
+
+        <h4 id="py-lambda">② Lambda Python — 3 Job Alias</h4>
+        <table>
+          <tr><th>Job</th><th>주요 Step</th><th>운영 영향</th></tr>
+          <tr>
+            <td><code>BuildAndUpload</code></td>
+            <td>source/layer/assets ZIP → upload-s3 · Slack 1/3</td>
+            <td>없음</td>
+          </tr>
+          <tr>
+            <td><code>PublishLambda</code></td>
+            <td>get-alias-version → layer/code publish · Slack 2/3</td>
+            <td>Alias 미변경</td>
+          </tr>
+          <tr>
+            <td><code>Deploy</code></td>
+            <td>create-appspec → CodeDeploy YAML → Alias 전환 · Slack 3/3</td>
+            <td>트래픽 전환</td>
+          </tr>
+        </table>
+        <div class="diagram">
+          <pre class="mermaid">
+flowchart TB
+  subgraph J1["Job1 BuildAndUpload"]
+    A1[Checkout + SSM] --> A2[ZIP source layer assets]
+    A2 --> A3[upload-s3]
+  end
+  subgraph J2["Job2 PublishLambda"]
+    B1[get-alias-version] --> B2[publish-layer-version]
+    B2 --> B3[update-function-code]
+    B3 -.->|미연결| LOLD["Alias 이전 버전"]
+  end
+  subgraph J3["Job3 Deploy"]
+    C1[create-appspec] --> C2[CodeDeploy YAML]
+    C2 --> C3["Alias 새 버전"]
+  end
+  J1 --> J2 --> J3
+          </pre>
+        </div>
+        <div class="callout">
+          일반 Python은 「패키지 올리고 서버에 바로 깔기」,
+          Lambda는 「버전을 만든 뒤 Alias만 전환」으로 리스크를 분리합니다.
+        </div>
+
+        <h4 id="py-schedule">기타 Python 활용</h4>
+        <table>
+          <tr><th>유형</th><th>프로젝트</th><th>실행</th></tr>
+          <tr><td>스케줄 Job</td><td>db-app-review-scraper · db-firewall-parser</td><td>cron / uv run</td></tr>
+          <tr><td>Desktop Release</td><td>db-excel-converter</td><td>tag v* · PyInstaller</td></tr>
+          <tr><td>IaC</td><td>db-iac-aws</td><td>Pulumi preview / up</td></tr>
+        </table>
+      </section>
+
+      <section id="other">
+        <h3>8. 기타 스택</h3>
+        <div class="card-grid">
+          <div class="card">
+            <strong>Flutter Desktop</strong>
+            <span>db-util-gui · Windows ZIP / macOS DMG → GitHub Release</span>
+          </div>
+          <div class="card">
+            <strong>iOS · Playwright · GHCR</strong>
+            <span>Xcode + Fastlane · PR E2E · Docker → GitHub Packages</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="highlights">
+        <h3>9. 하이라이트</h3>
+        <div class="card-grid">
+          <div class="card">
+            <strong>재사용 Action 설계</strong>
+            <span>PHP·Java·Python이 동일 배포 계약을 쓰도록 Composite/JS 라이브러리 운영</span>
+          </div>
+          <div class="card">
+            <strong>안전한 서버리스</strong>
+            <span>Lambda publish와 Alias 전환을 분리한 3-Job 블루그린</span>
+          </div>
+          <div class="card">
+            <strong>배포와 실행 분리</strong>
+            <span>Batch 이미지 푸시와 Step Functions 실행을 나누고 Slack·태그로 가시성 확보</span>
+          </div>
+        </div>
+      </section>
+
+      <footer>doobeom Portfolio · pages/github-actions · Infra &amp; CI</footer>
+    </div>
+  </div>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+  <script src="../assets/js/toc.js" defer></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/nav.js" defer></script>
+</body>
+</html>

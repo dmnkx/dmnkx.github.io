@@ -13,11 +13,14 @@
     :root {
       --bg: #0c1118;
       --surface: #151c28;
+      --surface-2: #1a2433;
       --border: #2a3a4f;
       --text: #e6edf5;
-      --muted: #8a9bb0;
+      --muted: #9aabc0;
       --accent: #3d8bfd;
       --accent-2: #22d3ee;
+      --icon-bg: rgba(61, 139, 253, 0.14);
+      --icon-stroke: #6ba8ff;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -40,10 +43,6 @@
       padding-top: var(--pf-nav-h);
     }
 
-    .pf-nav {
-      /* occupied by fixed nav; shell accounts for height */
-    }
-
     .viewer {
       flex: 1;
       width: 100%;
@@ -52,14 +51,13 @@
       display: block;
     }
 
-    /* Landing (no hash / home) */
     .landing {
       flex: 1;
       overflow-y: auto;
-      padding: 2.5rem 1.5rem 4rem;
+      padding: 3rem 1.75rem 4.5rem;
       background:
-        radial-gradient(ellipse 70% 45% at 15% -5%, rgba(61, 139, 253, 0.14), transparent 55%),
-        radial-gradient(ellipse 50% 40% at 95% 10%, rgba(34, 211, 238, 0.08), transparent 50%),
+        radial-gradient(ellipse 70% 45% at 12% -5%, rgba(61, 139, 253, 0.16), transparent 55%),
+        radial-gradient(ellipse 50% 40% at 95% 8%, rgba(34, 211, 238, 0.1), transparent 50%),
         var(--bg);
     }
 
@@ -67,84 +65,131 @@
     .viewer.hidden { display: none; }
 
     .landing-inner {
-      max-width: 960px;
+      max-width: 1100px;
       margin: 0 auto;
     }
 
     .landing-brand {
       font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: clamp(2rem, 5vw, 3rem);
+      font-size: clamp(2.6rem, 6vw, 3.75rem);
       font-weight: 500;
       color: var(--accent);
-      letter-spacing: -0.03em;
-      margin-bottom: 0.5rem;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      margin-bottom: 0.65rem;
     }
 
     .landing h1 {
-      font-size: clamp(1.25rem, 2.5vw, 1.65rem);
-      font-weight: 600;
-      margin-bottom: 0.65rem;
+      font-size: clamp(1.65rem, 3.2vw, 2.15rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.85rem;
     }
 
     .landing .lead {
       color: var(--muted);
-      font-size: 1rem;
-      max-width: 42rem;
-      line-height: 1.65;
-      margin-bottom: 2.25rem;
+      font-size: clamp(1.05rem, 2vw, 1.2rem);
+      max-width: 40rem;
+      line-height: 1.7;
+      margin-bottom: 2.75rem;
     }
 
     .group-label {
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.1em;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--muted);
-      margin: 1.75rem 0 0.85rem;
+      color: var(--text);
+      margin: 2.25rem 0 1rem;
+    }
+
+    .group-label::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
     }
 
     .cards {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 0.85rem;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.1rem;
     }
 
     .card {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
       text-decoration: none;
       color: inherit;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 1.15rem 1.2rem;
-      transition: border-color 0.15s, transform 0.15s, background 0.15s;
+      border-radius: 14px;
+      padding: 1.4rem 1.35rem 1.3rem;
+      min-height: 9.5rem;
+      transition: border-color 0.15s, transform 0.15s, background 0.15s, box-shadow 0.15s;
     }
 
     .card:hover {
       border-color: var(--accent);
-      background: #1a2433;
-      transform: translateY(-2px);
+      background: var(--surface-2);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+    }
+
+    .card-icon {
+      width: 2.6rem;
+      height: 2.6rem;
+      border-radius: 10px;
+      background: var(--icon-bg);
+      border: 1px solid rgba(61, 139, 253, 0.28);
+      display: grid;
+      place-items: center;
+      margin-bottom: 0.35rem;
+      flex-shrink: 0;
+    }
+
+    .card-icon svg {
+      width: 1.35rem;
+      height: 1.35rem;
+      stroke: var(--icon-stroke);
+      fill: none;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
     .card strong {
       display: block;
-      font-size: 0.95rem;
-      margin-bottom: 0.35rem;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.3;
     }
 
-    .card span {
-      font-size: 0.8rem;
+    .card .desc {
+      font-size: 0.95rem;
       color: var(--muted);
-      line-height: 1.45;
+      line-height: 1.5;
+      flex: 1;
     }
 
     .card .file {
       display: block;
-      margin-top: 0.7rem;
+      margin-top: 0.35rem;
       font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: 0.68rem;
+      font-size: 0.75rem;
       color: var(--accent-2);
-      opacity: 0.85;
+      opacity: 0.9;
+    }
+
+    @media (max-width: 640px) {
+      .landing { padding: 2rem 1.15rem 3.5rem; }
+      .cards { grid-template-columns: 1fr; gap: 0.9rem; }
+      .card { min-height: 0; padding: 1.25rem 1.15rem; }
     }
   </style>
 </head>
@@ -161,13 +206,16 @@
         <h1>포트폴리오</h1>
         <p class="lead">
           IaC·CI/CD·자동화 인프라, 모바일 앱 아키텍처, ML 실험을 정리한 문서모음입니다.
-          상단 탭으로 각 프로젝트를 바로 열 수 있습니다.
+          카드를 선택하거나 상단 탭으로 각 프로젝트를 바로 열 수 있습니다.
         </p>
 
-        <div class="group-label">doobeom — Infra &amp; CI</div>
-        <div class="cards" id="cards-doobeom"></div>
+        <div class="group-label">Infra</div>
+        <div class="cards" id="cards-infra"></div>
 
-        <div class="group-label">doobeom — Mobile</div>
+        <div class="group-label">CI</div>
+        <div class="cards" id="cards-ci"></div>
+
+        <div class="group-label">Mobile</div>
         <div class="cards" id="cards-mobile"></div>
 
         <div class="group-label">ML / Data</div>
@@ -183,15 +231,40 @@
     (function () {
       var PORTFOLIOS = window.PORTFOLIOS || [];
 
+      var ICONS = {
+        batch:
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><path d="M7 7h.01M7 17h.01"/></svg>',
+        jenkins:
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M8 14c0 2.5 1.8 5 4 6.5 2.2-1.5 4-4 4-6.5"/><path d="M9.5 11.5c-1.5.8-2.5 2-2.5 3.5M14.5 11.5c1.5.8 2.5 2 2.5 3.5"/></svg>',
+        docker:
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14h3v3H4zM8 14h3v3H8zM12 14h3v3h-3zM8 10h3v3H8zM12 10h3v3h-3zM16 14h3v3h-3z"/><path d="M3 18h15c2 0 3.5-1 4-2.5-1.5.5-3 0-3.5-1H4.5"/></svg>',
+        actions:
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6v12l10-6z"/></svg>',
+        playwright:
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 8h18M8 18v2M16 18v2M9 12h.01M15 12h.01"/></svg>',
+        importer:
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h5v5"/><path d="M19 3l-8 8"/><path d="M9 7H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>',
+        android:
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="9" width="10" height="10" rx="2"/><path d="M9 9V7a3 3 0 0 1 6 0v2M9 19v2M15 19v2M5 12l-2-2M19 12l2-2"/></svg>',
+        apple:
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 7.5c-.8.1-2.2-.5-3-1.3-.9-.9-1.3-2.1-1.2-3.2-1.1.1-2.4.8-3.2 1.7C8 6 7.5 8.2 8.2 10.5c.9 2.9 3.3 6.5 5.3 6.5.8 0 1.4-.4 2.1-.4.7 0 1.2.4 2.1.4 2 0 3.6-3.5 4.3-5"/><path d="M12 3.5c.3 1.5 1.3 2.8 2.7 3.2"/></svg>',
+        review:
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 3z"/><path d="M8 9h8M8 13h5"/></svg>',
+        ml:
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="8" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="12" cy="16" r="2"/><path d="M8 8h8M7.5 9.5l3.5 5M16.5 9.5l-3.5 5"/></svg>'
+      };
+
       var tabList = document.getElementById("tab-list");
       var landing = document.getElementById("landing");
       var viewer = document.getElementById("viewer");
-      var cardsDoobeom = document.getElementById("cards-doobeom");
+      var cardsInfra = document.getElementById("cards-infra");
+      var cardsCi = document.getElementById("cards-ci");
       var cardsMobile = document.getElementById("cards-mobile");
       var cardsMl = document.getElementById("cards-ml");
 
       function cardsFor(group) {
-        if (group === "doobeom") return cardsDoobeom;
+        if (group === "infra") return cardsInfra;
+        if (group === "ci") return cardsCi;
         if (group === "ml") return cardsMl;
         return cardsMobile;
       }
@@ -204,12 +277,14 @@
         a.setAttribute("role", "tab");
         tabList.appendChild(a);
 
+        var icon = ICONS[item.icon] || ICONS.batch;
         var card = document.createElement("a");
         card.className = "card";
         card.href = "#" + item.id;
         card.innerHTML =
+          "<div class=\"card-icon\">" + icon + "</div>" +
           "<strong>" + item.label + "</strong>" +
-          "<span>" + item.desc + "</span>" +
+          "<span class=\"desc\">" + item.desc + "</span>" +
           "<span class=\"file\">" + item.file + "</span>";
         cardsFor(item.group).appendChild(card);
       });
