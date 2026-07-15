@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Automation Infra — doobeom Portfolio</title>
+  <meta name="description" content="Docker Compose 기반 업무 자동화·모니터링 인프라 구성도" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/theme.css" />
+  <link rel="stylesheet" href="../assets/css/pages/structure.css" />
+  <link rel="stylesheet" href="../assets/css/nav.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="toc" aria-label="목차">
+      <p class="toc-label">Contents</p>
+      <nav>
+        <a href="#overview"><span class="num">01</span>개요</a>
+        <a href="#topology"><span class="num">02</span>시스템 구성도</a>
+        <a href="#domains"><span class="num">03</span>도메인 · 진입점</a>
+        <a href="#services"><span class="num">04</span>서비스 카탈로그</a>
+        <a href="#images"><span class="num">05</span>Docker 이미지</a>
+        <a href="#flows"><span class="num">06</span>실행 흐름</a>
+        <a href="#network"><span class="num">07</span>네트워크 · 볼륨</a>
+        <a href="#ops"><span class="num">08</span>운영 · 보안</a>
+        <a href="#stack"><span class="num">09</span>기술 스택</a>
+      </nav>
+    </aside>
+
+    <div class="wrap">
+    <details class="toc-mobile">
+      <summary>목차</summary>
+      <nav>
+        <a href="#overview">01 · 개요</a>
+        <a href="#topology">02 · 시스템 구성도</a>
+        <a href="#domains">03 · 도메인 · 진입점</a>
+        <a href="#services">04 · 서비스 카탈로그</a>
+        <a href="#images">05 · Docker 이미지</a>
+        <a href="#flows">06 · 실행 흐름</a>
+        <a href="#network">07 · 네트워크 · 볼륨</a>
+        <a href="#ops">08 · 운영 · 보안</a>
+        <a href="#stack">09 · 기술 스택</a>
+      </nav>
+    </details>
+
+    <header class="hero reveal" id="top">
+      <p class="brand">doobeom</p>
+      <h1>업무 자동화 인프라</h1>
+      <p class="lead">
+        Docker Compose 단일 스택으로 프록시·워크플로 오케스트레이션·브라우저 자동화·FastAPI·관측성을
+        <code>internal_net</code> 하나에 묶은 Dev 환경입니다. 포트폴리오용 문서이며 회사명·도메인은 가명(<strong>doobeom</strong>) 처리했습니다.
+      </p>
+      <div class="hero-meta">
+        <div>Stack <span>Docker Compose · Bridge</span></div>
+        <div>Scope <span>dev.doobeom.io</span></div>
+        <div>Services <span>11 containers</span></div>
+        <div>Source <span>docker-compose.yml</span></div>
+      </div>
+    </header>
+
+    <!-- 1 Overview -->
+    <section class="reveal" id="overview">
+      <h2>1. 개요</h2>
+      <p class="sub">단일 호스트에서 운영되는 자동화 플랫폼의 역할 분리와 계층 구조입니다.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 900 210" xmlns="http://www.w3.org/2000/svg">
+          <defs><marker id="a" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#8fa89a"/></marker></defs>
+          <rect x="20" y="18" width="860" height="34" rx="3" fill="#14241c" stroke="#3ecf8e" stroke-width="1.5"/>
+          <text x="450" y="40" text-anchor="middle" fill="#3ecf8e" font-size="13" font-weight="600">Edge — nginx (Nginx Proxy Manager)</text>
+          <line x1="450" y1="52" x2="450" y2="66" stroke="#8fa89a" marker-end="url(#a)"/>
+          <rect x="20" y="70" width="860" height="34" rx="3" fill="#141c24" stroke="#5b9fd4"/>
+          <text x="450" y="92" text-anchor="middle" fill="#5b9fd4" font-size="12">Automation Core — n8n · n8n-runners · playwright-worker · automation-api</text>
+          <line x1="450" y1="104" x2="450" y2="118" stroke="#8fa89a" marker-end="url(#a)"/>
+          <rect x="20" y="122" width="420" height="34" rx="3" fill="#1a1624" stroke="#c4a5e7"/>
+          <text x="230" y="144" text-anchor="middle" fill="#c4a5e7" font-size="12">Adjacent — legal n8n (격리 인스턴스)</text>
+          <rect x="460" y="122" width="420" height="34" rx="3" fill="#14201c" stroke="#7dd3c0"/>
+          <text x="670" y="144" text-anchor="middle" fill="#7dd3c0" font-size="12">Adjacent — appsmith (내부 UI)</text>
+          <line x1="230" y1="156" x2="230" y2="170" stroke="#e07a5f" marker-end="url(#a)"/>
+          <line x1="670" y1="156" x2="670" y2="170" stroke="#e07a5f" marker-end="url(#a)"/>
+          <text x="450" y="195" text-anchor="middle" fill="#e07a5f" font-family="IBM Plex Mono,monospace" font-size="10">Observability — cadvisor → prometheus → grafana</text>
+        </svg>
+        <p class="diagram-caption">FIG 1-1 · 5계층 역할 분리</p>
+      </div>
+
+      <p>
+        본 인프라는 사내/업무용 자동화를 위한 <strong>단일 호스트 Docker Compose</strong> 구성입니다.
+        모든 서비스는 <code>internal_net</code> (bridge)에 연결되어 컨테이너 이름(DNS)으로 상호 호출하며,
+        외부 노출은 Nginx Proxy Manager(NPM)와 호스트 포트 매핑을 통해 이뤄집니다.
+      </p>
+      <ul class="plain">
+        <li><strong>Edge</strong> — Nginx Proxy Manager: TLS 종료, 리버스 프록시, Proxy Host 관리 UI</li>
+        <li><strong>Automation Core</strong> — n8n 워크플로 엔진 + external task runners + Playwright worker + FastAPI</li>
+        <li><strong>Domain APIs</strong> — automation-api (GHCR 이미지, PG 정산·Google Spread/SheetTab)</li>
+        <li><strong>Adjacent</strong> — legal 전용 n8n, Appsmith EE (데이터·역할 격리)</li>
+        <li><strong>Observability</strong> — cAdvisor → Prometheus → Grafana 파이프라인</li>
+      </ul>
+    </section>
+
+    <!-- 2 Topology -->
+    <section class="reveal" id="topology">
+      <h2>2. 시스템 구성도</h2>
+      <p class="sub">Internet에서 NPM을 거쳐 internal_net 상의 서비스로 트래픽이 분기됩니다. 점선은 브로커·내부 API·메트릭 스크레이프 경로입니다.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 980 580" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#8fa89a"/></marker>
+            <marker id="ac" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#3ecf8e"/></marker>
+          </defs>
+          <rect x="390" y="10" width="200" height="40" rx="4" fill="#1a2620" stroke="#3ecf8e" stroke-width="1.5"/>
+          <text x="490" y="36" text-anchor="middle" fill="#e8f0eb" font-family="IBM Plex Mono,monospace" font-size="12">Internet / Clients</text>
+          <line x1="490" y1="50" x2="490" y2="72" stroke="#3ecf8e" stroke-width="1.5" marker-end="url(#ac)"/>
+          <rect x="300" y="76" width="380" height="58" rx="4" fill="#14241c" stroke="#3ecf8e" stroke-width="1.5"/>
+          <text x="490" y="100" text-anchor="middle" fill="#3ecf8e" font-size="14" font-weight="600">nginx (NPM)</text>
+          <text x="490" y="120" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="10">:80 · :443 · admin :8000→81</text>
+          <rect x="120" y="155" width="740" height="26" rx="3" fill="#121814" stroke="#2a3d34"/>
+          <text x="490" y="172" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="11">internal_net (bridge) — Compose DNS</text>
+          <rect x="30" y="200" width="130" height="52" rx="3" fill="#14201c" stroke="#7dd3c0"/>
+          <text x="95" y="222" text-anchor="middle" fill="#7dd3c0" font-size="12" font-weight="600">appsmith</text>
+          <text x="95" y="240" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">:8888→80</text>
+          <rect x="180" y="200" width="150" height="52" rx="3" fill="#141c24" stroke="#5b9fd4"/>
+          <text x="255" y="222" text-anchor="middle" fill="#5b9fd4" font-size="12" font-weight="600">n8n</text>
+          <text x="255" y="240" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">:5678 · broker :5679</text>
+          <rect x="350" y="200" width="150" height="52" rx="3" fill="#101820" stroke="#5b9fd4" stroke-dasharray="4 3"/>
+          <text x="425" y="222" text-anchor="middle" fill="#5b9fd4" font-size="12" font-weight="600">n8n-runners</text>
+          <text x="425" y="240" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">JS / Python</text>
+          <rect x="520" y="200" width="150" height="52" rx="3" fill="#1c1a12" stroke="#e8b84a"/>
+          <text x="595" y="222" text-anchor="middle" fill="#e8b84a" font-size="12" font-weight="600">playwright-worker</text>
+          <text x="595" y="240" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">:3101</text>
+          <rect x="690" y="200" width="120" height="52" rx="3" fill="#141c24" stroke="#5b9fd4"/>
+          <text x="750" y="222" text-anchor="middle" fill="#5b9fd4" font-size="12" font-weight="600">automation-api</text>
+          <text x="750" y="240" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">:8001→8000</text>
+          <rect x="830" y="200" width="120" height="52" rx="3" fill="#1a1624" stroke="#c4a5e7"/>
+          <text x="890" y="222" text-anchor="middle" fill="#c4a5e7" font-size="12" font-weight="600">legal</text>
+          <text x="890" y="240" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">:6678</text>
+          <path d="M490 134 L95 200 M490 134 L255 200 M490 134 L425 200 M490 134 L595 200 M490 134 L750 200 M490 134 L890 200" stroke="#2a3d34" fill="none"/>
+          <path d="M255 252 L425 200" stroke="#5b9fd4" stroke-dasharray="4 3" fill="none" marker-end="url(#ar)"/>
+          <path d="M330 226 L520 226" stroke="#e8b84a" stroke-dasharray="4 3" fill="none" marker-end="url(#ar)"/>
+          <rect x="180" y="280" width="490" height="32" rx="3" fill="#121814" stroke="#2a3d34"/>
+          <text x="425" y="300" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="10">shared volume: /data/shared-downloads ↔ n8n · runners · playwright-worker</text>
+          <text x="40" y="340" fill="#e07a5f" font-family="IBM Plex Mono,monospace" font-size="10" letter-spacing="0.08em">OBSERVABILITY</text>
+          <rect x="40" y="352" width="150" height="48" rx="3" fill="#241816" stroke="#e07a5f"/>
+          <text x="115" y="374" text-anchor="middle" fill="#e07a5f" font-size="12" font-weight="600">cadvisor</text>
+          <text x="115" y="390" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">:8080</text>
+          <line x1="190" y1="376" x2="230" y2="376" stroke="#e07a5f" marker-end="url(#ar)"/>
+          <rect x="232" y="352" width="150" height="48" rx="3" fill="#241816" stroke="#e07a5f"/>
+          <text x="307" y="374" text-anchor="middle" fill="#e07a5f" font-size="12" font-weight="600">prometheus</text>
+          <text x="307" y="390" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">:9090 · scrape 5s</text>
+          <line x1="382" y1="376" x2="422" y2="376" stroke="#e07a5f" marker-end="url(#ar)"/>
+          <rect x="424" y="352" width="150" height="48" rx="3" fill="#241816" stroke="#e07a5f"/>
+          <text x="499" y="374" text-anchor="middle" fill="#e07a5f" font-size="12" font-weight="600">grafana</text>
+          <text x="499" y="390" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">:3000</text>
+        </svg>
+        <p class="diagram-caption">FIG 2-1 · 전체 토폴로지 (11 services)</p>
+      </div>
+
+      <div class="legend">
+        <span><i style="background:var(--proxy)"></i>Edge</span>
+        <span><i style="background:var(--auto)"></i>Automation</span>
+        <span><i style="background:var(--browser)"></i>Browser</span>
+        <span><i style="background:var(--legal)"></i>Legal</span>
+        <span><i style="background:var(--ui)"></i>Appsmith</span>
+        <span><i style="background:var(--obs)"></i>Observability</span>
+      </div>
+
+      <p>
+        컨테이너 간 호출 시에는 <strong>호스트 포트가 아닌 컨테이너 포트</strong>를 사용합니다.
+        예: n8n → <code>http://automation-api:8000</code>, n8n → <code>http://playwright-worker:3101</code>.
+        호스트에 매핑된 <code>8001</code>, <code>5678</code> 등은 외부 접속·디버그용입니다.
+      </p>
+    </section>
+
+    <!-- 3 Domains -->
+    <section class="reveal" id="domains">
+      <h2>3. 도메인 · 진입점</h2>
+      <p class="sub">compose에 명시된 호스트명과 NPM Proxy Host 설정. TLS는 Edge에서 종료합니다.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 900 200" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="20" width="180" height="48" rx="3" fill="#14241c" stroke="#3ecf8e" stroke-width="1.5"/>
+          <text x="110" y="42" text-anchor="middle" fill="#3ecf8e" font-family="IBM Plex Mono,monospace" font-size="11">*.dev.doobeom.io</text>
+          <text x="110" y="58" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">NPM :443</text>
+          <line x1="200" y1="44" x2="250" y2="44" stroke="#8fa89a" marker-end="url(#ar)"/>
+          <rect x="252" y="20" width="155" height="48" rx="3" fill="#141c24" stroke="#5b9fd4"/>
+          <text x="329" y="42" text-anchor="middle" fill="#5b9fd4" font-family="IBM Plex Mono,monospace" font-size="10">n8n.dev.doobeom.io</text>
+          <text x="329" y="58" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">→ n8n:5678</text>
+          <rect x="420" y="20" width="155" height="48" rx="3" fill="#1a1624" stroke="#c4a5e7"/>
+          <text x="497" y="42" text-anchor="middle" fill="#c4a5e7" font-family="IBM Plex Mono,monospace" font-size="10">legal.dev.doobeom.io</text>
+          <text x="497" y="58" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">→ legal:6678</text>
+          <rect x="588" y="20" width="292" height="48" rx="3" fill="#141c24" stroke="#5b9fd4"/>
+          <text x="734" y="42" text-anchor="middle" fill="#5b9fd4" font-family="IBM Plex Mono,monospace" font-size="10">api.dev.doobeom.io (확장 계획)</text>
+          <text x="734" y="58" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">/pg · /google → automation-api:8000</text>
+          <rect x="20" y="95" width="860" height="85" rx="3" fill="#121814" stroke="#2a3d34"/>
+          <text x="450" y="120" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="10">NPM 관리 UI — 호스트 :8000 → 컨테이너 :81</text>
+          <text x="450" y="145" text-anchor="middle" fill="#3ecf8e" font-family="IBM Plex Mono,monospace" font-size="11">내부 DNS: automation-api:8000 · n8n:5678 · cadvisor:8080</text>
+          <text x="450" y="168" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">Proxy Host별 SSL 인증서 — ./data/nginx/letsencrypt</text>
+        </svg>
+        <p class="diagram-caption">FIG 3-1 · 도메인 라우팅 개요</p>
+      </div>
+
+      <div class="domain-row">
+        <div class="host">n8n.dev.doobeom.io</div>
+        <div class="desc"><strong>n8n</strong> 메인 워크플로·웹훅. <code>N8N_PROTOCOL=https</code>, <code>WEBHOOK_URL</code> 설정. 호스트 포트 <code>5678</code>. External runners broker <code>:5679</code>.</div>
+      </div>
+      <div class="domain-row">
+        <div class="host">legal.dev.doobeom.io</div>
+        <div class="desc"><strong>legal</strong> 전용 n8n. 볼륨 <code>/data/legal</code>로 메인과 데이터 격리. 포트 <code>6678</code>.</div>
+      </div>
+      <div class="domain-row">
+        <div class="host">api.dev.doobeom.io</div>
+        <div class="desc">단일 API 엔트리(계획). NPM Custom Location으로 <code>/pg/*</code>, <code>/google/*</code> → <code>automation-api:8000</code>. Kong 없이 NPM만으로 역할 분리.</div>
+      </div>
+    </section>
+
+    <!-- 4 Services -->
+    <section class="reveal" id="services">
+      <h2>4. 서비스 카탈로그</h2>
+      <p class="sub">docker-compose.yml에 정의된 11개 서비스 — 이미지/빌드, 포트, 볼륨, 의존 관계.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 900 120" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="35" width="72" height="36" rx="2" fill="#14241c" stroke="#3ecf8e"/><text x="46" y="57" text-anchor="middle" fill="#3ecf8e" font-size="9">nginx</text>
+          <rect x="92" y="35" width="72" height="36" rx="2" fill="#14201c" stroke="#7dd3c0"/><text x="128" y="57" text-anchor="middle" fill="#7dd3c0" font-size="9">appsmith</text>
+          <rect x="174" y="35" width="72" height="36" rx="2" fill="#141c24" stroke="#5b9fd4"/><text x="210" y="57" text-anchor="middle" fill="#5b9fd4" font-size="9">n8n</text>
+          <rect x="256" y="35" width="72" height="36" rx="2" fill="#101820" stroke="#5b9fd4" stroke-dasharray="3 3"/><text x="292" y="57" text-anchor="middle" fill="#5b9fd4" font-size="8">runners</text>
+          <rect x="338" y="35" width="72" height="36" rx="2" fill="#1c1a12" stroke="#e8b84a"/><text x="374" y="57" text-anchor="middle" fill="#e8b84a" font-size="8">playwright</text>
+          <rect x="420" y="35" width="72" height="36" rx="2" fill="#141c24" stroke="#5b9fd4"/><text x="456" y="57" text-anchor="middle" fill="#5b9fd4" font-size="8">api</text>
+          <rect x="502" y="35" width="72" height="36" rx="2" fill="#1a1624" stroke="#c4a5e7"/><text x="538" y="57" text-anchor="middle" fill="#c4a5e7" font-size="9">legal</text>
+          <rect x="584" y="35" width="72" height="36" rx="2" fill="#241816" stroke="#e07a5f"/><text x="620" y="57" text-anchor="middle" fill="#e07a5f" font-size="8">cadvisor</text>
+          <rect x="666" y="35" width="72" height="36" rx="2" fill="#241816" stroke="#e07a5f"/><text x="702" y="57" text-anchor="middle" fill="#e07a5f" font-size="8">prom</text>
+          <rect x="748" y="35" width="72" height="36" rx="2" fill="#241816" stroke="#e07a5f"/><text x="784" y="57" text-anchor="middle" fill="#e07a5f" font-size="8">grafana</text>
+          <text x="450" y="22" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">11 containers on internal_net</text>
+          <text x="450" y="95" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">custom build ×3: images/n8n · runners · playwright-worker</text>
+        </svg>
+        <p class="diagram-caption">FIG 4-1 · 서비스 맵 (한눈에 보기)</p>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Service</th><th>Role</th><th>Image / Build</th><th>Ports</th><th>Volumes / Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="svc"><span class="tag tag-proxy">edge</span> nginx</td>
+              <td>리버스 프록시 · TLS · Proxy Manager UI</td>
+              <td><code>jc21/nginx-proxy-manager:latest</code></td>
+              <td><code>80:80</code> <code>443:443</code> <code>8000:81</code></td>
+              <td><code>./data/nginx/data</code> <code>./data/nginx/letsencrypt</code> · TZ=Asia/Seoul</td>
+            </tr>
+            <tr>
+              <td class="svc"><span class="tag tag-ui">ui</span> appsmith</td>
+              <td>내부 툴링 / 어드민 UI (EE)</td>
+              <td><code>appsmith/appsmith-ee:v1.99</code></td>
+              <td><code>8888:80</code></td>
+              <td><code>/data/appsmith → /appsmith-stacks</code></td>
+            </tr>
+            <tr>
+              <td class="svc"><span class="tag tag-auto">core</span> n8n</td>
+              <td>워크플로 · 웹훅 · Code node · External runners broker</td>
+              <td>Build <code>./images/n8n</code> (n8n + playwright-core, axios)</td>
+              <td><code>5678:5678</code> broker <code>5679</code></td>
+              <td><code>/data/n8n</code> <code>/data/shared-downloads</code> · shm 2gb · trust proxy · native python runner</td>
+            </tr>
+            <tr>
+              <td class="svc"><span class="tag tag-auto">core</span> n8n-runners</td>
+              <td>Task Runner (JS/Python) 분리 실행</td>
+              <td>Build <code>./images/runners</code> (moment, uuid, playwright, numpy, pandas, httpx)</td>
+              <td>—</td>
+              <td><code>depends_on: n8n</code> · <code>N8N_RUNNERS_TASK_BROKER_URI=http://n8n:5679</code> · shm 2gb</td>
+            </tr>
+            <tr>
+              <td class="svc"><span class="tag tag-browser">browser</span> playwright-worker</td>
+              <td>브라우저 자동화 워커 (스크립트 실행 API)</td>
+              <td>Build <code>./images/playwright-worker</code> (Playwright v1.59.1)</td>
+              <td><code>3101:3101</code></td>
+              <td>scripts · /tmp · shared-downloads · <code>N8N_BASE_URL=http://n8n:5678</code></td>
+            </tr>
+            <tr>
+              <td class="svc"><span class="tag tag-legal">legal</span> legal</td>
+              <td>분리 워크플로용 n8n (민감 업무)</td>
+              <td><code>docker.n8n.io/n8nio/n8n:latest</code></td>
+              <td><code>6678:6678</code></td>
+              <td><code>/data/legal</code> 격리 스토리지</td>
+            </tr>
+            <tr>
+              <td class="svc"><span class="tag tag-auto">api</span> automation-api</td>
+              <td>FastAPI — PG 정산, Google Spread/SheetTab</td>
+              <td><code>ghcr.io/doobeom-platform/automation-api:latest</code></td>
+              <td><code>8001:8000</code></td>
+              <td>amd64/arm64 · internal <code>automation-api:8000</code> · SA JSON 마운트</td>
+            </tr>
+            <tr>
+              <td class="svc"><span class="tag tag-obs">obs</span> cadvisor</td>
+              <td>컨테이너/호스트 메트릭 exporter</td>
+              <td><code>gcr.io/cadvisor/cadvisor:latest</code></td>
+              <td><code>8080:8080</code></td>
+              <td>rootfs, docker sock, sys 등 read-only</td>
+            </tr>
+            <tr>
+              <td class="svc"><span class="tag tag-obs">obs</span> prometheus</td>
+              <td>메트릭 수집·저장</td>
+              <td><code>prom/prometheus:latest</code></td>
+              <td><code>9090:9090</code></td>
+              <td><code>./prometheus.yml</code> — <code>cadvisor:8080</code> scrape 5s</td>
+            </tr>
+            <tr>
+              <td class="svc"><span class="tag tag-obs">obs</span> grafana</td>
+              <td>대시보드·시각화</td>
+              <td><code>grafana/grafana:latest</code></td>
+              <td><code>3000:3000</code></td>
+              <td>named volume <code>grafana-storage</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 5 Docker images -->
+    <section class="reveal" id="images">
+      <h2>5. Docker 이미지</h2>
+      <p class="sub">
+        각 서비스가 사용하는 이미지의 출처, 커스텀 여부, 역할과 선택 이유를 정리합니다.
+        커스텀 3종(<code>n8n</code>, <code>runners</code>, <code>playwright-worker</code>)과 GHCR 배포 API를 중점적으로 다룹니다.
+      </p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 900 160" xmlns="http://www.w3.org/2000/svg">
+          <text x="20" y="24" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="10">IMAGE SOURCES</text>
+          <rect x="20" y="40" width="200" height="90" rx="3" fill="#14241c" stroke="#3ecf8e"/>
+          <text x="120" y="68" text-anchor="middle" fill="#3ecf8e" font-size="12" font-weight="600">Official / Registry</text>
+          <text x="120" y="92" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">NPM · Appsmith · legal</text>
+          <text x="120" y="110" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">cAdvisor · Prom · Grafana</text>
+          <rect x="250" y="40" width="200" height="90" rx="3" fill="#141c24" stroke="#5b9fd4"/>
+          <text x="350" y="68" text-anchor="middle" fill="#5b9fd4" font-size="12" font-weight="600">Custom Dockerfile</text>
+          <text x="350" y="92" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">images/n8n</text>
+          <text x="350" y="110" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">images/runners · playwright</text>
+          <rect x="480" y="40" width="200" height="90" rx="3" fill="#1c1a12" stroke="#e8b84a"/>
+          <text x="580" y="68" text-anchor="middle" fill="#e8b84a" font-size="12" font-weight="600">CI → GHCR</text>
+          <text x="580" y="92" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">automation-api</text>
+          <text x="580" y="110" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">amd64 + arm64 · latest</text>
+          <rect x="710" y="40" width="170" height="90" rx="3" fill="#121814" stroke="#2a3d34"/>
+          <text x="795" y="68" text-anchor="middle" fill="#8fa89a" font-size="12" font-weight="600">Runtime</text>
+          <text x="795" y="92" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">compose up / pull</text>
+          <text x="795" y="110" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="9">internal_net</text>
+        </svg>
+        <p class="diagram-caption">FIG 5-1 · 이미지 공급 경로 (Official / Build / GHCR)</p>
+      </div>
+
+      <div class="img-card" style="--c:var(--proxy)">
+        <h4>nginx <span class="img-ref">jc21/nginx-proxy-manager:latest</span></h4>
+        <p class="img-meta">type: official registry · service: nginx</p>
+        <p>
+          <strong>Nginx Proxy Manager</strong> 공식 이미지입니다. Nginx + Let's Encrypt + 웹 UI를 한 컨테이너로 제공해,
+          도메인별 Proxy Host·SSL 발급을 UI로 관리합니다. 호스트 <code>:80/:443</code>으로 트래픽을 받고,
+          관리 UI는 <code>:8000→81</code>로 노출합니다. 데이터는 <code>./data/nginx/data</code>, 인증서는
+          <code>./data/nginx/letsencrypt</code>에 영속화합니다.
+        </p>
+        <ul class="plain">
+          <li>선택 이유: TLS·리버스 프록시를 코드 없이 설정, Kong 대비 운영 부담 적음</li>
+          <li>내부 네트워크에서 컨테이너 이름·포트로 upstream 지정</li>
+        </ul>
+      </div>
+
+      <div class="img-card" style="--c:var(--ui)">
+        <h4>appsmith <span class="img-ref">appsmith/appsmith-ee:v1.99</span></h4>
+        <p class="img-meta">type: official (EE pinned) · service: appsmith</p>
+        <p>
+          <strong>Appsmith Enterprise</strong> 고정 버전 이미지입니다. 로우코드로 내부 어드민·업무 화면을 구성합니다.
+          스택 데이터는 <code>/data/appsmith</code>를 <code>/appsmith-stacks</code>에 마운트해 유지합니다.
+          호스트 <code>:8888→80</code>으로 접근합니다.
+        </p>
+        <ul class="plain">
+          <li>버전 pin(<code>v1.99</code>)으로 업그레이드 시 회귀를 통제</li>
+          <li>자동화 스택과 같은 <code>internal_net</code>에 두어 n8n·API와 연동 가능</li>
+        </ul>
+      </div>
+
+      <div class="img-card" style="--c:var(--auto)">
+        <h4>n8n <span class="img-ref">build ./images/n8n ← n8nio/n8n:latest</span></h4>
+        <p class="img-meta">type: custom Dockerfile · service: n8n</p>
+        <p>
+          공식 <code>n8nio/n8n</code> 위에 <strong>playwright-core</strong>와 <strong>axios</strong>를 전역 설치한 커스텀 이미지입니다.
+          Code node에서 외부 npm 패키지를 쓰려면 <code>NODE_FUNCTION_ALLOW_EXTERNAL</code>과
+          <code>NODE_PATH</code>가 필요해, 베이스 이미지만으로는 부족합니다. External runners·trust proxy·네이티브 Python runner도
+          compose env로 활성화합니다.
+        </p>
+        <ul class="plain">
+          <li>베이스: <code>n8nio/n8n:latest</code> → root로 <code>npm i -g playwright-core axios</code> → USER node</li>
+          <li>broker <code>:5679</code>로 <code>n8n-runners</code>와 통신 · 데이터 <code>/data/n8n</code></li>
+          <li>파일 공유: <code>/data/shared-downloads</code> · <code>shm_size: 2gb</code></li>
+        </ul>
+      </div>
+
+      <div class="img-card" style="--c:var(--auto)">
+        <h4>n8n-runners <span class="img-ref">build ./images/runners ← n8nio/runners:latest</span></h4>
+        <p class="img-meta">type: custom Dockerfile · service: n8n-runners</p>
+        <p>
+          n8n <strong>External Task Runner</strong> 공식 이미지를 확장합니다. JS runner에는 moment·uuid·playwright·axios와
+          Chromium을, Python runner에는 numpy·pandas·httpx를 넣어 Code/파이썬 워크플로의 무거운 작업을
+          메인 n8n 프로세스와 분리합니다. <code>n8n-task-runners.json</code>으로 runner 설정을 주입합니다.
+        </p>
+        <ul class="plain">
+          <li><code>N8N_RUNNERS_TASK_BROKER_URI=http://n8n:5679</code> · auth token으로 broker 연결</li>
+          <li>포트 5680/5681(이미지 EXPOSE) · <code>depends_on: n8n</code> · shm 2gb</li>
+          <li>메인 n8n을 가볍게 유지하고 runner에서 브라우저·데이터 처리 실행</li>
+        </ul>
+      </div>
+
+      <div class="img-card" style="--c:var(--browser)">
+        <h4>playwright-worker <span class="img-ref">build ./images/playwright-worker ← mcr.microsoft.com/playwright:v1.59.1-jammy</span></h4>
+        <p class="img-meta">type: custom Dockerfile · service: playwright-worker</p>
+        <p>
+          Microsoft 공식 <strong>Playwright</strong> 이미지(브라우저 바이너리 포함) 위에 Node 앱을 올립니다.
+          n8n과 별도 HTTP API(<code>:3101</code>)로 브라우저 시나리오를 실행하고,
+          스크립트는 <code>/data/browserless-scripts</code>, 임시 파일은 <code>/data/playwright</code>,
+          산출물은 shared-downloads를 사용합니다. n8n과는 <code>N8N_BASE_URL</code>로 콜백합니다.
+        </p>
+        <ul class="plain">
+          <li>베이스: Playwright v1.59.1 Jammy · <code>npm install</code> 후 <code>npm start</code></li>
+          <li>n8n Code node의 인라인 브라우저와 역할 분리 — 장시간·재사용 시나리오에 적합</li>
+          <li><code>shm_size: 2gb</code>로 Chromium 안정성 확보</li>
+        </ul>
+      </div>
+
+      <div class="img-card" style="--c:var(--legal)">
+        <h4>legal <span class="img-ref">docker.n8n.io/n8nio/n8n:latest</span></h4>
+        <p class="img-meta">type: official registry · service: legal</p>
+        <p>
+          메인 n8n과 <strong>분리된 두 번째 n8n</strong> 인스턴스입니다. 커스텀 패키지 없이 공식 이미지를 그대로 쓰며,
+          호스트·웹훅을 <code>legal.dev.doobeom.io</code> / 포트 <code>6678</code>에 맞춥니다.
+          데이터는 <code>/data/legal</code>만 사용해 메인 워크플로·자격증명과 공간을 완전히 나눕니다.
+        </p>
+        <ul class="plain">
+          <li>선택 이유: 민감 도메인(법무 등)을 동일 호스트에서도 격리 운영</li>
+          <li>메인처럼 runners/playwright를 붙이지 않는 최소 구성</li>
+        </ul>
+      </div>
+
+      <div class="img-card" style="--c:var(--auto)">
+        <h4>automation-api <span class="img-ref">ghcr.io/doobeom-platform/automation-api:latest</span></h4>
+        <p class="img-meta">type: CI → GHCR (amd64/arm64) · base: python:3.14 · service: automation-api</p>
+        <p>
+          자체 개발 <strong>FastAPI</strong> 서비스입니다. Dockerfile은 <code>python:3.14</code>에 pip로 dependencies를 설치하고
+          non-root <code>app</code> 유저로 uvicorn을 띄웁니다. GitHub Actions가 이미지를 빌드해 GHCR에 푸시하며,
+          compose는 <code>:latest</code>를 pull합니다. PG 정산 조회, Google Drive 스프레드시트/시트 탭 ensure API를 제공합니다.
+        </p>
+        <ul class="plain">
+          <li>포트 <code>8001:8000</code> · 내부 호출은 <code>http://automation-api:8000</code></li>
+          <li>인증: Google SA JSON 마운트 또는 env · Clean Architecture 구조의 Python 앱</li>
+          <li>로컬/서버 모두 multi-arch 이미지로 Apple Silicon·linux/amd64 지원</li>
+        </ul>
+      </div>
+
+      <div class="img-card" style="--c:var(--obs)">
+        <h4>cadvisor <span class="img-ref">gcr.io/cadvisor/cadvisor:latest</span></h4>
+        <p class="img-meta">type: official · service: cadvisor</p>
+        <p>
+          Google <strong>cAdvisor</strong> 이미지로 컨테이너·호스트 리소스 메트릭을 export합니다.
+          rootfs, docker sock, sys 등을 read-only로 마운트해 런타임 상태를 수집하고,
+          Prometheus가 <code>cadvisor:8080</code>을 scrape합니다.
+        </p>
+      </div>
+
+      <div class="img-card" style="--c:var(--obs)">
+        <h4>prometheus <span class="img-ref">prom/prometheus:latest</span></h4>
+        <p class="img-meta">type: official · service: prometheus</p>
+        <p>
+          메트릭 TSDB입니다. 호스트의 <code>./prometheus.yml</code>을 마운트해 job
+          <code>docker-containers → cadvisor:8080</code>, scrape interval <strong>5s</strong>(개발용; 운영은 15s 권장)으로 수집합니다.
+          UI/쿼리는 호스트 <code>:9090</code>.
+        </p>
+      </div>
+
+      <div class="img-card" style="--c:var(--obs)">
+        <h4>grafana <span class="img-ref">grafana/grafana:latest</span></h4>
+        <p class="img-meta">type: official · service: grafana</p>
+        <p>
+          대시보드·시각화 UI입니다. Prometheus를 datasource로 붙여 컨테이너 CPU/메모리 등을 모니터링합니다.
+          대시보드 설정은 named volume <code>grafana-storage</code>에 보존하며, 포트 <code>:3000</code>으로 접근합니다.
+        </p>
+      </div>
+    </section>
+
+    <!-- 6 Flows -->
+    <section class="reveal" id="flows">
+      <h2>6. 주요 실행 흐름</h2>
+      <p class="sub">실무에서 자주 타는 경로. 각 흐름마다 도식과 단계 설명을 함께 둡니다.</p>
+
+      <div class="flow-block">
+        <h4>A. Appsmith → n8n 어드민 상품 등록</h4>
+        <div class="diagram">
+          <svg viewBox="0 0 720 140" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="50" width="60" height="28" rx="2" fill="#14201c" stroke="#7dd3c0"/><text x="40" y="68" text-anchor="middle" fill="#e8f0eb" font-size="9">Staff</text>
+            <line x1="70" y1="64" x2="95" y2="64" stroke="#7dd3c0" marker-end="url(#ar)"/>
+            <rect x="97" y="50" width="75" height="28" rx="2" fill="#14201c" stroke="#7dd3c0"/><text x="134" y="68" text-anchor="middle" fill="#e8f0eb" font-size="9">Appsmith</text>
+            <line x1="172" y1="64" x2="197" y2="64" stroke="#5b9fd4" marker-end="url(#ar)"/>
+            <rect x="199" y="50" width="60" height="28" rx="2" fill="#141c24" stroke="#5b9fd4"/><text x="229" y="68" text-anchor="middle" fill="#e8f0eb" font-size="9">n8n</text>
+            <line x1="259" y1="64" x2="300" y2="64" stroke="#8fa89a" marker-end="url(#ar)"/>
+            <rect x="302" y="50" width="95" height="28" rx="2" fill="#121814" stroke="#2a3d34"/><text x="349" y="68" text-anchor="middle" fill="#8fa89a" font-size="8">외부 어드민</text>
+            <!-- n8n branches -->
+            <path d="M229 50 L229 28 L450 28" stroke="#e8b84a" stroke-dasharray="3 3" fill="none" marker-end="url(#ar)"/>
+            <rect x="452" y="14" width="120" height="28" rx="2" fill="#1c1a12" stroke="#e8b84a"/><text x="512" y="32" text-anchor="middle" fill="#e8b84a" font-size="8">playwright-worker</text>
+            <path d="M229 78 L229 110 L450 110" stroke="#5b9fd4" stroke-dasharray="3 3" fill="none" marker-end="url(#ar)"/>
+            <rect x="452" y="96" width="120" height="28" rx="2" fill="#141c24" stroke="#5b9fd4"/><text x="512" y="114" text-anchor="middle" fill="#5b9fd4" font-size="8">automation-api</text>
+            <text x="580" y="48" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="7">UI 자동화 / 스크래핑</text>
+            <text x="580" y="130" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="7">PG·Sheets API</text>
+          </svg>
+        </div>
+        <ol>
+          <li>사내 직원이 Appsmith UI(<code>:8888</code>)에 로그인 — n8n UI를 직접 쓰지 않음</li>
+          <li>Appsmith 앱(폼·버튼)이 <code>internal_net</code> 경유 또는 NPM 도메인으로 n8n 웹훅/워크플로를 호출</li>
+          <li>n8n이 상품 등록용 자동화 워크플로 실행 (검증·변환·외부 어드민 API)</li>
+          <li>필요 시 n8n이 <strong>playwright-worker</strong>로 브라우저 UI 조작, <strong>automation-api(FastAPI)</strong>로 정산/시트 연동을 호출</li>
+          <li>어드민에 상품이 반영되고, 결과를 Appsmith에 성공/실패로 표시</li>
+        </ol>
+        <p style="margin:0.65rem 0 0;font-size:0.86rem;color:var(--muted)">
+          핵심: Appsmith는 <strong>업무 화면</strong>, n8n은 <strong>오케스트레이터</strong>, playwright-worker·FastAPI는 n8n이 위임하는 <strong>전문 워커</strong>입니다.
+        </p>
+      </div>
+
+      <div class="flow-block">
+        <h4>B. 워크플로 + External Runner</h4>
+        <div class="diagram">
+          <svg viewBox="0 0 520 70" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="20" width="70" height="30" rx="2" fill="#14241c" stroke="#3ecf8e"/><text x="45" y="39" text-anchor="middle" fill="#e8f0eb" font-size="9">Client</text>
+            <line x1="80" y1="35" x2="105" y2="35" stroke="#8fa89a" marker-end="url(#ar)"/>
+            <rect x="107" y="20" width="65" height="30" rx="2" fill="#141c24" stroke="#5b9fd4"/><text x="139" y="39" text-anchor="middle" fill="#e8f0eb" font-size="9">n8n</text>
+            <line x1="172" y1="35" x2="197" y2="35" stroke="#5b9fd4" stroke-dasharray="3 3" marker-end="url(#ar)"/>
+            <rect x="199" y="20" width="75" height="30" rx="2" fill="#101820" stroke="#5b9fd4" stroke-dasharray="3 3"/><text x="236" y="39" text-anchor="middle" fill="#e8f0eb" font-size="9">runners</text>
+            <line x1="274" y1="35" x2="299" y2="35" stroke="#8fa89a" marker-end="url(#ar)"/>
+            <rect x="301" y="20" width="100" height="30" rx="2" fill="#121814" stroke="#2a3d34"/><text x="351" y="39" text-anchor="middle" fill="#8fa89a" font-size="8">shared-downloads</text>
+          </svg>
+        </div>
+        <ol>
+          <li>사용자가 <code>n8n.dev.doobeom.io</code> 또는 웹훅으로 워크플로 실행</li>
+          <li>n8n이 Task Broker <code>:5679</code>로 <code>n8n-runners</code>에 작업 위임</li>
+          <li>Runner가 JS(Chromium 포함) / Python 태스크 수행 (<code>N8N_RUNNERS_AUTH_TOKEN</code> 인증)</li>
+          <li>산출 파일은 <code>/data/shared-downloads</code>로 n8n·playwright와 공유</li>
+        </ol>
+      </div>
+
+      <div class="flow-block">
+        <h4>C. playwright-worker 동작</h4>
+        <div class="diagram">
+          <svg viewBox="0 0 640 90" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="30" width="70" height="30" rx="2" fill="#141c24" stroke="#5b9fd4"/><text x="45" y="49" text-anchor="middle" fill="#e8f0eb" font-size="9">n8n</text>
+            <line x1="80" y1="45" x2="110" y2="45" stroke="#e8b84a" marker-end="url(#ar)"/>
+            <rect x="112" y="30" width="130" height="30" rx="2" fill="#1c1a12" stroke="#e8b84a"/><text x="177" y="49" text-anchor="middle" fill="#e8f0eb" font-size="8">HTTP API :3101</text>
+            <line x1="242" y1="45" x2="272" y2="45" stroke="#8fa89a" marker-end="url(#ar)"/>
+            <rect x="274" y="30" width="100" height="30" rx="2" fill="#121814" stroke="#2a3d34"/><text x="324" y="49" text-anchor="middle" fill="#8fa89a" font-size="8">scripts 로드</text>
+            <line x1="374" y1="45" x2="404" y2="45" stroke="#8fa89a" marker-end="url(#ar)"/>
+            <rect x="406" y="30" width="100" height="30" rx="2" fill="#1c1a12" stroke="#e8b84a"/><text x="456" y="49" text-anchor="middle" fill="#e8f0eb" font-size="8">Chromium</text>
+            <line x1="506" y1="45" x2="536" y2="45" stroke="#8fa89a" marker-end="url(#ar)"/>
+            <rect x="538" y="30" width="90" height="30" rx="2" fill="#121814" stroke="#2a3d34"/><text x="583" y="49" text-anchor="middle" fill="#8fa89a" font-size="8">결과/파일</text>
+            <text x="45" y="80" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="7">Appsmith 상품등록·스크래핑 워크플로에서도 동일 호출</text>
+          </svg>
+        </div>
+        <ol>
+          <li>호출자(주로 n8n, 또는 Appsmith 경유 워크플로)가 <code>http://playwright-worker:3101</code>로 HTTP 요청</li>
+          <li>워커가 <code>SCRIPTS_DIR</code>(<code>/data/browserless-scripts</code>)에서 지정 스크립트를 찾아 실행</li>
+          <li>내장 Chromium(Playwright v1.59)으로 로그인·클릭·입력·다운로드 등 UI 자동화 수행</li>
+          <li>산출물(파일·JSON)을 shared-downloads 또는 응답 body로 반환 · 필요 시 <code>N8N_BASE_URL</code>로 n8n에 콜백</li>
+          <li>n8n Code node 인라인 브라우저와 분리 — <strong>장시간·재사용 시나리오</strong>와 <strong>shm 2gb</strong>가 필요한 작업에 사용</li>
+        </ol>
+        <p style="margin:0.65rem 0 0;font-size:0.86rem;color:var(--muted)">
+          어드민 상품 등록처럼 “공식 API가 없거나 UI로만 가능한 작업”은 playwright-worker가 담당하고,
+          n8n은 타임아웃·재시도·후속 단계를 오케스트레이션합니다.
+        </p>
+      </div>
+
+      <div class="flow-block">
+        <h4>D. automation-api (FastAPI) 동작</h4>
+        <div class="diagram">
+          <svg viewBox="0 0 700 100" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="36" width="70" height="28" rx="2" fill="#141c24" stroke="#5b9fd4"/><text x="45" y="54" text-anchor="middle" fill="#e8f0eb" font-size="9">n8n</text>
+            <line x1="80" y1="50" x2="110" y2="50" stroke="#5b9fd4" marker-end="url(#ar)"/>
+            <rect x="112" y="36" width="120" height="28" rx="2" fill="#141c24" stroke="#5b9fd4"/><text x="172" y="54" text-anchor="middle" fill="#e8f0eb" font-size="8">:8000 FastAPI</text>
+            <path d="M172 36 L172 18 L320 18" stroke="#8fa89a" stroke-dasharray="3 3" fill="none" marker-end="url(#ar)"/>
+            <rect x="322" y="4" width="90" height="26" rx="2" fill="#121814" stroke="#2a3d34"/><text x="367" y="21" text-anchor="middle" fill="#8fa89a" font-size="8">/pg/*</text>
+            <path d="M172 64 L172 82 L320 82" stroke="#8fa89a" stroke-dasharray="3 3" fill="none" marker-end="url(#ar)"/>
+            <rect x="322" y="70" width="110" height="26" rx="2" fill="#121814" stroke="#2a3d34"/><text x="377" y="87" text-anchor="middle" fill="#8fa89a" font-size="8">/google/*</text>
+            <line x1="412" y1="17" x2="470" y2="17" stroke="#8fa89a" marker-end="url(#ar)"/>
+            <rect x="472" y="4" width="100" height="26" rx="2" fill="#121814" stroke="#2a3d34"/><text x="522" y="21" text-anchor="middle" fill="#8fa89a" font-size="8">PG 결제 API</text>
+            <line x1="432" y1="83" x2="470" y2="83" stroke="#8fa89a" marker-end="url(#ar)"/>
+            <rect x="472" y="70" width="120" height="26" rx="2" fill="#121814" stroke="#2a3d34"/><text x="532" y="87" text-anchor="middle" fill="#8fa89a" font-size="8">Drive / Sheets</text>
+            <text x="600" y="50" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="7">ensure = PUT upsert</text>
+          </svg>
+        </div>
+        <ol>
+          <li>호출자(주로 n8n HTTP Request 노드)가 <code>http://automation-api:8000</code>으로 REST 호출 (호스트 디버그는 <code>:8001</code>)</li>
+          <li><strong>PG</strong> — <code>GET /pg/naverpay?date=YYYYMMDD</code>로 건별 정산 조회, 가공(컬럼명·HTML unescape 등) 후 JSON 반환</li>
+          <li><strong>Spread</strong> — <code>PUT /google/ensure/spread/{date}</code>로 <code>PG_{date}</code> 스프레드시트 id를 조회·없으면 생성</li>
+          <li><strong>Sheet tab</strong> — <code>PUT /google/ensure/sheettab/{spreadId}</code> + body <code>{"name":"..."}</code>으로 하단 탭 id 확보</li>
+          <li>Google 호출은 서비스 계정 자격증명으로 수행 · Google 통신 성공 시 HTTP 200 + body <code>success</code>로 결과 구분</li>
+        </ol>
+        <p style="margin:0.65rem 0 0;font-size:0.86rem;color:var(--muted)">
+          FastAPI는 n8n Code 노드에 자격증명·비즈니스 로직을 넣지 않고, <strong>재사용 가능한 HTTP API</strong>로 분리한 레이어입니다.
+          Playwright가 “브라우저로만 되는 일”을 맡는 반면, FastAPI는 “공식 API·시트 id” 같은 구조화된 연동을 맡습니다.
+        </p>
+      </div>
+
+      <div class="flow-block">
+        <h4>E. 관측 파이프라인</h4>
+        <div class="diagram">
+          <svg viewBox="0 0 420 70" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="20" width="80" height="30" rx="2" fill="#241816" stroke="#e07a5f"/><text x="50" y="39" text-anchor="middle" fill="#e8f0eb" font-size="9">cadvisor</text>
+            <line x1="90" y1="35" x2="115" y2="35" stroke="#e07a5f" marker-end="url(#ar)"/>
+            <rect x="117" y="20" width="90" height="30" rx="2" fill="#241816" stroke="#e07a5f"/><text x="162" y="39" text-anchor="middle" fill="#e8f0eb" font-size="9">prometheus</text>
+            <line x1="207" y1="35" x2="232" y2="35" stroke="#e07a5f" marker-end="url(#ar)"/>
+            <rect x="234" y="20" width="75" height="30" rx="2" fill="#241816" stroke="#e07a5f"/><text x="271" y="39" text-anchor="middle" fill="#e8f0eb" font-size="9">grafana</text>
+          </svg>
+        </div>
+        <ol>
+          <li>cAdvisor가 컨테이너 메트릭 expose (<code>:8080</code>)</li>
+          <li>Prometheus가 <code>prometheus.yml</code> 기준 5초 간격 scrape</li>
+          <li>Grafana(<code>:3000</code>)에서 Prometheus datasource 시각화</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 7 Network & Storage -->
+    <section class="reveal" id="network">
+      <h2>7. 네트워크 · 볼륨 · 리소스</h2>
+
+      <div class="split side-by-side">
+        <div>
+          <h3>Network</h3>
+          <div class="diagram">
+            <svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="200" cy="80" rx="185" ry="65" fill="none" stroke="#3ecf8e" stroke-width="1.5" stroke-dasharray="6 4"/>
+              <text x="200" y="30" text-anchor="middle" fill="#3ecf8e" font-family="IBM Plex Mono,monospace" font-size="10">internal_net (bridge)</text>
+              <rect x="30" y="55" width="55" height="24" rx="2" fill="#141c24" stroke="#5b9fd4"/><text x="57" y="71" text-anchor="middle" fill="#8fa89a" font-size="7">n8n</text>
+              <rect x="95" y="55" width="55" height="24" rx="2" fill="#141c24" stroke="#5b9fd4"/><text x="122" y="71" text-anchor="middle" fill="#8fa89a" font-size="7">api</text>
+              <rect x="160" y="55" width="55" height="24" rx="2" fill="#1c1a12" stroke="#e8b84a"/><text x="187" y="71" text-anchor="middle" fill="#8fa89a" font-size="7">pw</text>
+              <rect x="225" y="55" width="55" height="24" rx="2" fill="#241816" stroke="#e07a5f"/><text x="252" y="71" text-anchor="middle" fill="#8fa89a" font-size="7">prom</text>
+              <rect x="290" y="55" width="55" height="24" rx="2" fill="#14241c" stroke="#3ecf8e"/><text x="317" y="71" text-anchor="middle" fill="#8fa89a" font-size="7">nginx</text>
+              <text x="200" y="115" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="8">DNS: service_name:container_port</text>
+              <text x="200" y="135" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="8">호스트 포트 = 외부/디버그용</text>
+            </svg>
+            <p class="diagram-caption">FIG 7-1 · internal_net</p>
+          </div>
+          <ul class="plain">
+            <li><code>internal_net</code> — driver <strong>bridge</strong>, 모든 서비스 참여</li>
+            <li>Compose DNS: <code>n8n:5678</code>, <code>automation-api:8000</code>, <code>cadvisor:8080</code></li>
+            <li>컨테이너 간 통신은 컨테이너 포트 사용 (호스트 매핑 포트 아님)</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Storage</h3>
+          <div class="diagram">
+            <svg viewBox="0 0 400 160" xmlns="http://www.w3.org/2000/svg">
+              <rect x="120" y="25" width="160" height="32" rx="3" fill="#14241c" stroke="#3ecf8e"/>
+              <text x="200" y="46" text-anchor="middle" fill="#3ecf8e" font-family="IBM Plex Mono,monospace" font-size="9">/data/shared-downloads</text>
+              <line x1="160" y1="57" x2="100" y2="85" stroke="#3ecf8e" stroke-dasharray="3 3"/>
+              <line x1="200" y1="57" x2="200" y2="85" stroke="#3ecf8e" stroke-dasharray="3 3"/>
+              <line x1="240" y1="57" x2="300" y2="85" stroke="#3ecf8e" stroke-dasharray="3 3"/>
+              <rect x="55" y="88" width="70" height="26" rx="2" fill="#141c24" stroke="#5b9fd4"/><text x="90" y="105" text-anchor="middle" fill="#5b9fd4" font-size="8">n8n</text>
+              <rect x="165" y="88" width="70" height="26" rx="2" fill="#101820" stroke="#5b9fd4"/><text x="200" y="105" text-anchor="middle" fill="#5b9fd4" font-size="8">runners</text>
+              <rect x="275" y="88" width="70" height="26" rx="2" fill="#1c1a12" stroke="#e8b84a"/><text x="310" y="105" text-anchor="middle" fill="#e8b84a" font-size="8">playwright</text>
+              <rect x="30" y="130" width="90" height="22" rx="2" fill="#121814" stroke="#2a3d34"/><text x="75" y="145" text-anchor="middle" fill="#8fa89a" font-size="7">/data/n8n</text>
+              <rect x="155" y="130" width="90" height="22" rx="2" fill="#121814" stroke="#2a3d34"/><text x="200" y="145" text-anchor="middle" fill="#8fa89a" font-size="7">/data/legal</text>
+              <rect x="280" y="130" width="90" height="22" rx="2" fill="#121814" stroke="#2a3d34"/><text x="325" y="145" text-anchor="middle" fill="#8fa89a" font-size="7">grafana vol</text>
+            </svg>
+            <p class="diagram-caption">FIG 7-2 · 볼륨 연결</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Path / Name</th><th>Mounted on</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">./data/nginx/data</td><td>nginx:/data</td><td>Proxy Manager 설정·DB</td></tr>
+            <tr><td class="mono">./data/nginx/letsencrypt</td><td>nginx:/etc/letsencrypt</td><td>TLS 인증서</td></tr>
+            <tr><td class="mono">/data/appsmith</td><td>appsmith:/appsmith-stacks</td><td>Appsmith 영속 데이터</td></tr>
+            <tr><td class="mono">/data/n8n</td><td>n8n:/home/node/.n8n</td><td>워크플로·자격증명</td></tr>
+            <tr><td class="mono">/data/legal</td><td>legal:/home/node/.n8n</td><td>legal n8n 격리 데이터</td></tr>
+            <tr><td class="mono">/data/shared-downloads</td><td>n8n, runners, playwright-worker</td><td>파일 공유 파이프라인</td></tr>
+            <tr><td class="mono">/data/browserless-scripts</td><td>playwright-worker:/usr/src/app/scripts</td><td>브라우저 스크립트</td></tr>
+            <tr><td class="mono">/data/playwright</td><td>playwright-worker:/tmp</td><td>임시 작업 디렉터리</td></tr>
+            <tr><td class="mono">./prometheus.yml</td><td>prometheus:/etc/prometheus/prometheus.yml</td><td>스크레이프 설정</td></tr>
+            <tr><td class="mono">grafana-storage</td><td>grafana:/var/lib/grafana</td><td>대시보드 named volume</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>리소스</h3>
+      <ul class="plain">
+        <li><code>n8n</code>, <code>n8n-runners</code>, <code>playwright-worker</code>: <code>shm_size: 2gb</code> (브라우저·무거운 프로세스)</li>
+        <li>커스텀 이미지 3종: <code>images/n8n</code>, <code>images/runners</code>, <code>images/playwright-worker</code></li>
+        <li><code>automation-api</code>: GHCR CI 빌드 (amd64/arm64), 서버에서 pull 후 recreate</li>
+      </ul>
+    </section>
+
+    <!-- 8 Ops -->
+    <section class="reveal" id="ops">
+      <h2>8. 운영 · 보안 · 확장</h2>
+
+      <div class="diagram">
+        <svg viewBox="0 0 700 100" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="30" width="120" height="40" rx="3" fill="#14241c" stroke="#3ecf8e"/>
+          <text x="80" y="48" text-anchor="middle" fill="#3ecf8e" font-size="10">TLS @ NPM</text>
+          <text x="80" y="62" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="8">Edge only</text>
+          <line x1="140" y1="50" x2="175" y2="50" stroke="#8fa89a" marker-end="url(#ar)"/>
+          <rect x="177" y="30" width="120" height="40" rx="3" fill="#141c24" stroke="#5b9fd4"/>
+          <text x="237" y="48" text-anchor="middle" fill="#5b9fd4" font-size="10">HTTP internal</text>
+          <text x="237" y="62" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="8">service DNS</text>
+          <line x1="297" y1="50" x2="332" y2="50" stroke="#8fa89a" marker-end="url(#ar)"/>
+          <rect x="334" y="30" width="120" height="40" rx="3" fill="#1a1624" stroke="#c4a5e7"/>
+          <text x="394" y="48" text-anchor="middle" fill="#c4a5e7" font-size="10">legal 격리</text>
+          <text x="394" y="62" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="8">별도 volume</text>
+          <line x1="454" y1="50" x2="489" y2="50" stroke="#8fa89a" marker-end="url(#ar)"/>
+          <rect x="491" y="30" width="190" height="40" rx="3" fill="#121814" stroke="#2a3d34"/>
+          <text x="586" y="48" text-anchor="middle" fill="#8fa89a" font-size="10">Kong 미사용 — NPM path routing</text>
+          <text x="586" y="62" text-anchor="middle" fill="#8fa89a" font-family="IBM Plex Mono,monospace" font-size="8">현 규모에 맞춘 단순 운영</text>
+        </svg>
+        <p class="diagram-caption">FIG 8-1 · 운영 설계 원칙</p>
+      </div>
+
+      <ul class="plain">
+        <li>Edge에서 TLS 종료 후 내부는 HTTP·서비스명 통신 — 단일 호스트/VPC 패턴</li>
+        <li>n8n External Runner: broker 인증 토큰 (<code>N8N_RUNNERS_AUTH_TOKEN</code>)</li>
+        <li>legal 인스턴스 분리 — 민감 워크플로와 일반 자동화 데이터 공간 분리</li>
+        <li>모니터링: cAdvisor 기반, scrape 5s (개발 환경용, 운영 시 15s 권장)</li>
+        <li>API Gateway(Kong) 없이 NPM 경로/호스트 라우팅 — 인증·쿼터 필요 시 이후 검토</li>
+      </ul>
+
+      <h3>확장 방향</h3>
+      <ul class="plain">
+        <li><code>api.dev.doobeom.io</code> 단일 엔트리 + path 라우팅 (<code>/pg</code>, <code>/google</code> → automation-api)</li>
+        <li>automation-api: 서비스 계정 JSON 마운트 또는 <code>GOOGLE_APPLICATION_CREDENTIALS</code></li>
+        <li>이미지 갱신: CI push 후 서버 <code>docker compose pull && up</code> 또는 Watchtower 검토</li>
+      </ul>
+    </section>
+
+    <!-- 9 Stack -->
+    <section class="reveal" id="stack">
+      <h2>9. 기술 스택</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Layer</th><th>Technologies</th></tr></thead>
+          <tbody>
+            <tr><td class="svc">Orchestration</td><td>Docker Compose, bridge network, named + bind volumes</td></tr>
+            <tr><td class="svc">Edge</td><td>Nginx Proxy Manager (jc21)</td></tr>
+            <tr><td class="svc">Workflow</td><td>n8n (custom image), n8n Task Runners (JS/Python), isolated legal n8n</td></tr>
+            <tr><td class="svc">Browser</td><td>Playwright worker + runner Chromium</td></tr>
+            <tr><td class="svc">Application API</td><td>FastAPI (automation-api via GHCR), PG 결제 API · Google Drive/Sheets</td></tr>
+            <tr><td class="svc">Internal tools</td><td>Appsmith EE</td></tr>
+            <tr><td class="svc">Observability</td><td>cAdvisor, Prometheus, Grafana</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      <div>doobeom · Operations Automation Infrastructure</div>
+      <div>Portfolio doc · docker-compose.yml 기반 · 가명(doobeom) 처리</div>
+    </footer>
+    </div><!-- /.wrap -->
+  </div><!-- /.layout -->
+
+  <script>
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) e.target.classList.add("on"); }), { threshold: 0.06 });
+    document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+</script>
+    <script src="../assets/js/toc.js" defer></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/nav.js" defer></script>
+</body>
+</html>

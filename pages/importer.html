@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CB Analysis Importer — doobeom Portfolio</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/theme.css" />
+  <link rel="stylesheet" href="../assets/css/nav.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="toc" aria-label="목차">
+      <p class="toc-label">Contents</p>
+      <nav>
+        <a href="#overview"><span class="num">01</span>Overview</a>
+        <a href="#problem"><span class="num">02</span>문제 정의</a>
+        <a href="#stack"><span class="num">03</span>기술 스택</a>
+        <a href="#architecture"><span class="num">04</span>아키텍처</a>
+        <a href="#structure"><span class="num">05</span>디렉터리</a>
+        <a href="#etl"><span class="num">06</span>ETL 파이프라인</a>
+        <a href="#ui"><span class="num">07</span>UI / 비동기</a>
+        <a href="#sheets"><span class="num">08</span>Google Sheets</a>
+        <a href="#packaging"><span class="num">09</span>패키징 & CI/CD</a>
+        <a href="#patterns"><span class="num">10</span>기술 결정</a>
+        <a href="#run"><span class="num">11</span>실행 가이드</a>
+        <a href="#classes"><span class="num">12</span>클래스 맵</a>
+      </nav>
+    </aside>
+
+    <div class="wrap">
+      <details class="toc-mobile">
+        <summary>목차</summary>
+        <nav>
+          <a href="#overview">01 · Overview</a>
+          <a href="#problem">02 · 문제 정의</a>
+          <a href="#stack">03 · 기술 스택</a>
+          <a href="#architecture">04 · 아키텍처</a>
+          <a href="#structure">05 · 디렉터리</a>
+          <a href="#etl">06 · ETL 파이프라인</a>
+          <a href="#ui">07 · UI / 비동기</a>
+          <a href="#sheets">08 · Google Sheets</a>
+          <a href="#packaging">09 · 패키징 & CI/CD</a>
+          <a href="#patterns">10 · 기술 결정</a>
+          <a href="#run">11 · 실행 가이드</a>
+          <a href="#classes">12 · 클래스 맵</a>
+        </nav>
+      </details>
+
+      <div class="hero">
+        <div class="hero-badge">Python · PyQt5 · pandas ETL</div>
+        <h2>CB Analysis Importer<br />두범비즈팀 통계자료 업로더</h2>
+        <p>
+          CJ 출고 엑셀과 CCMC 원가 엑셀을 병합·정제해 로컬 xlsx로 저장하고,
+          Google Sheets <code>RAW</code> 시트에 append하는 내부용 데스크톱 ETL 앱입니다.
+          분석팀이 반복하던 수작업 병합을 GUI 한 번의 업로드로 자동화합니다.
+        </p>
+        <div class="meta-row">
+          <span class="chip"><strong>회사</strong> 두범 (doobeom)</span>
+          <span class="chip"><strong>패키지</strong> cb-analysis-importer</span>
+          <span class="chip"><strong>패턴</strong> MVVM</span>
+          <span class="chip"><strong>배포</strong> Windows Installer → S3</span>
+        </div>
+      </div>
+
+      <div class="callout">
+        본 문서는 포트폴리오용입니다. 회사명·경로·버킷 등 식별 정보는 <strong>두범(doobeom)</strong>으로 가명 처리되었습니다.
+      </div>
+
+      <section id="overview">
+        <h3>1. Overview</h3>
+        <div class="card-grid">
+          <div class="card"><strong>유형</strong><span>데스크톱 ETL</span></div>
+          <div class="card"><strong>출력</strong><span>Local xlsx + Sheets RAW</span></div>
+          <div class="card"><strong>GUI</strong><span>PyQt5 + Fusion QSS</span></div>
+          <div class="card"><strong>인증</strong><span>Service Account</span></div>
+        </div>
+      </section>
+
+      <section id="problem">
+        <h3>2. 문제 정의와 해결</h3>
+        <p>물류(출고)와 원가(마스터)가 서로 다른 엑셀로 흩어져, 채널별 매출·원가 분석을 매번 수작업으로 붙여야 했습니다.</p>
+        <div class="card-grid">
+          <div class="card">
+            <strong>Before</strong>
+            <span>VLOOKUP·피벗 수동 반복 · 채널 alias/취소 규칙을 사람이 기억 · 붙여넣기 오타·누락</span>
+          </div>
+          <div class="card">
+            <strong>After</strong>
+            <span>두 파일 첨부 후 업로드 · convert() 정규화·집계·LEFT JOIN · ~/doobeombiz 저장 + Sheets append</span>
+          </div>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">전체 흐름</div>
+          <pre class="mermaid">
+flowchart LR
+  subgraph Sources["입력"]
+    CJ["CJ 출고 엑셀"]
+    CCMC["CCMC 원가 엑셀"]
+  end
+  subgraph App["AnalysisUploader"]
+    GUI["PyQt5 GUI"]
+    ETL["pandas convert()"]
+    Local["~/doobeombiz/*.xlsx"]
+    Worker["UploadWorker QThread"]
+  end
+  Sheets["Google Sheets\nworksheet: RAW"]
+  CJ --> GUI
+  CCMC --> GUI
+  GUI --> ETL
+  ETL --> Local
+  ETL --> Worker
+  Worker --> Sheets
+          </pre>
+        </div>
+      </section>
+
+      <section id="stack">
+        <h3>3. 기술 스택</h3>
+        <table>
+          <tr><th>계층</th><th>기술</th><th>역할</th></tr>
+          <tr><td>언어</td><td><code>Python ≥ 3.10</code></td><td>앱 런타임 / ETL / 패키징</td></tr>
+          <tr><td>GUI</td><td><code>PyQt5</code>, Fusion, <code>stylesheet.qss</code></td><td>데스크톱 UI, DnD</td></tr>
+          <tr><td>데이터</td><td><code>pandas</code>, <code>numpy</code>, <code>openpyxl</code>, <code>xlrd</code></td><td>엑셀 I/O, 필터·groupby·merge</td></tr>
+          <tr><td>클라우드</td><td><code>gspread</code>, <code>oauth2client</code></td><td>서비스 계정 Sheets append</td></tr>
+          <tr><td>설정</td><td><code>QSettings("Doobeom","Converter")</code></td><td>경로·인코딩 영속화</td></tr>
+          <tr><td>패키징</td><td>PyInstaller, NSIS</td><td>onedir exe + Windows 설치</td></tr>
+          <tr><td>CI/CD</td><td>GitHub Actions + AWS OIDC → S3</td><td>수동 트리거 빌드·배포</td></tr>
+        </table>
+        <div class="diagram">
+          <div class="diagram-label">의존성 맵</div>
+          <pre class="mermaid">
+mindmap
+  root((CB Analysis Importer))
+    Client
+      PyQt5
+      QSS Theme
+      FileButton DnD
+    ETL
+      pandas
+      openpyxl
+      channel mapping
+    Integration
+      gspread
+      Service Account
+      Sheets RAW
+    Delivery
+      PyInstaller
+      NSIS
+      S3 Artifacts
+          </pre>
+        </div>
+      </section>
+
+      <section id="architecture">
+        <h3>4. 아키텍처</h3>
+        <p>UI와 ETL·외부 I/O를 분리하기 위해 MVVM을 채택했습니다. View는 이벤트만, ViewModel이 오케스트레이션, Model이 데이터 규칙을 소유합니다.</p>
+        <div class="diagram">
+          <div class="diagram-label">MVVM 레이어</div>
+          <pre class="mermaid">
+flowchart TB
+  subgraph View["View — views/"]
+    MW["MainWidget"]
+    SW["SettingsWindow"]
+    FB["FileButton"]
+    LD["LoadingDialog"]
+    UW["UploadWorker"]
+  end
+  subgraph ViewModel["ViewModel"]
+    MVM["MainViewModel"]
+  end
+  subgraph Model["Model — models/"]
+    CV["convert()"]
+    GS["google_sheets"]
+    SM["SettingManager"]
+    UT["Util"]
+  end
+  MW -->|files / click| MVM
+  MVM -->|convert + to_excel| CV
+  MVM -->|DataFrame| MW
+  MW --> UW
+  UW --> GS
+  SW --> SM
+  MW --> UT
+          </pre>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">런타임 시퀀스</div>
+          <pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor User
+  participant MW as MainWidget
+  participant VM as MainViewModel
+  participant CV as convert()
+  participant FS as ~/doobeombiz
+  participant UW as UploadWorker
+  participant GS as Google Sheets RAW
+
+  User->>MW: CJ / CCMC 파일 선택
+  User->>MW: 업로드 클릭
+  MW->>VM: convert_button_clicked(fileInfo)
+  VM->>CV: convert(fileInfo)
+  CV-->>VM: result_df
+  VM->>FS: 두범비즈_변환_YYYYMMDDHHMM.xlsx
+  VM-->>MW: DataFrame
+  MW->>UW: start(result_df)
+  UW->>GS: append_rows(df)
+  UW-->>MW: finished(success, message)
+          </pre>
+        </div>
+        <div class="callout">
+          <code>python main.py --cli</code>는 CWD의 <code>cj.xlsx</code>, <code>ccmc.xlsx</code>로 변환·로컬 저장만 수행합니다 (Sheets 업로드 없음).
+        </div>
+      </section>
+
+      <section id="structure">
+        <h3>5. 디렉터리 구조</h3>
+<pre>cb-analysis-importer/
+├── main.py
+├── stylesheet.qss
+├── win.spec / installer*.nsi
+├── models/
+│   ├── convert.py              # ★ ETL 핵심
+│   ├── google_sheets.py
+│   ├── SettingManager.py
+│   ├── Util.py
+│   └── AppConst.py
+├── viewmodels/
+│   └── MainViewModel.py
+├── views/
+│   ├── components/
+│   ├── util/
+│   └── widgets/
+├── configs/                    # Google SA JSON (민감)
+└── .github/workflows/publish.windows.yml</pre>
+      </section>
+
+      <section id="etl">
+        <h3>6. ETL 파이프라인</h3>
+        <p>핵심은 <code>models/convert.py</code>의 <code>convert(fileInfo)</code>입니다. 두 엑셀을 읽어 비즈니스 규칙을 적용한 뒤 분석용 정규 테이블을 반환합니다.</p>
+        <div class="diagram">
+          <div class="diagram-label">변환 단계</div>
+          <pre class="mermaid">
+flowchart TD
+  A["pd.read_excel CJ"] --> B["pd.read_excel CCMC\nskiprows=3"]
+  B --> C["컬럼 rename"]
+  C --> D["제품분류 leaf 추출"]
+  D --> E["채널명 결정"]
+  E --> F["channel_name_mapping"]
+  F --> G["주문상태 != 주문취소"]
+  G --> H["groupby + 수량 sum"]
+  H --> I["LEFT JOIN 품목코드"]
+  I --> J["inf/NaN → 0"]
+  J --> K["구분 컬럼 · 날짜 포맷"]
+  K --> L["result_df 반환"]
+          </pre>
+        </div>
+        <ol>
+          <li><strong>엑셀 로드</strong> — CCMC는 <code>skiprows=3</code></li>
+          <li><strong>스키마 정규화</strong> — 주문수량→수량, 금액→총 매출액(v+) 등</li>
+          <li><strong>제품분류 leaf</strong> — <code>"식품&gt;냉동&gt;만두"</code> → 마지막 토큰</li>
+          <li><strong>채널 결정</strong> — SELF면 판매채널, 이후 alias dict</li>
+          <li><strong>취소 건 제외</strong> — <code>주문상태 != "주문취소"</code></li>
+          <li><strong>groupby 수량 합산</strong></li>
+          <li><strong>원가 LEFT JOIN</strong> — 품목코드 ↔ 제품코드</li>
+        </ol>
+
+        <h4>채널 정규화</h4>
+        <div class="diagram">
+          <div class="diagram-label">alias 예시</div>
+          <pre class="mermaid">
+flowchart LR
+  A["Cafe24(신) 유튜브쇼핑"] --> A2["두범비즈"]
+  B["카카오톡선물하기"] --> B2["카카오선물하기"]
+  C["신세계TV쇼핑"] --> C2["신세계라이브쇼핑"]
+  D["GS shop"] --> D2["GS SHOP"]
+  E["SELF"] --> E2["판매채널 폴백"]
+          </pre>
+        </div>
+<pre><code>channel_name_mapping = {
+  "Cafe24(신) 유튜브쇼핑": "두범비즈",
+  "카카오톡선물하기": "카카오선물하기",
+  "신세계TV쇼핑": "신세계라이브쇼핑",
+  "GS shop": "GS SHOP",
+  # ...
+}</code></pre>
+
+        <h4>출력 스키마</h4>
+        <table>
+          <tr><th>컬럼</th><th>설명</th></tr>
+          <tr><td>주문일자 / 출고일</td><td><code>%Y-%m-%d</code> 문자열</td></tr>
+          <tr><td>채널명</td><td>정규화된 판매/중개 채널</td></tr>
+          <tr><td>수량</td><td>groupby 합산</td></tr>
+          <tr><td>총 매출액(v+)</td><td>VAT 포함 매출</td></tr>
+          <tr><td>원가(v-)</td><td>VAT 제외 원가 (없으면 0)</td></tr>
+        </table>
+        <div class="diagram">
+          <div class="diagram-label">조인 관계</div>
+          <pre class="mermaid">
+erDiagram
+  CJ_ORDER ||--o{ MERGED_ROW : "품목코드"
+  CCMC_COST ||--o{ MERGED_ROW : "제품코드"
+  CJ_ORDER {
+    date 주문일자
+    string 주문번호
+    string 품목코드
+    int 수량
+    string 채널명
+  }
+  CCMC_COST {
+    string 제품코드
+    float 원가
+    string 제품분류
+  }
+  MERGED_ROW {
+    date 주문일자
+    string 채널명
+    int 수량
+    float 총매출액
+    float 원가
+  }
+          </pre>
+        </div>
+      </section>
+
+      <section id="ui">
+        <h3>7. UI / 비동기 업로드</h3>
+        <p>네트워크 I/O가 UI 스레드를 막지 않도록 업로드만 <code>QThread</code>로 분리했습니다.</p>
+        <div class="diagram">
+          <div class="diagram-label">스레드 분리</div>
+          <pre class="mermaid">
+flowchart TB
+  subgraph UIThread["Main / UI Thread"]
+    FB1["FileButton CJ"]
+    FB2["FileButton CCMC"]
+    BTN["업로드 버튼"]
+    LOAD["LoadingDialog"]
+    MSG["QMessageBox"]
+  end
+  subgraph WorkerThread["UploadWorker"]
+    RUN["run()"]
+    APPEND["append_rows(df)"]
+  end
+  FB1 --> BTN
+  FB2 --> BTN
+  BTN -->|"동기: convert + to_excel"| DF["DataFrame"]
+  DF --> LOAD
+  DF --> WorkerThread
+  RUN --> APPEND
+  APPEND -->|"finished(bool,str)"| MSG
+          </pre>
+        </div>
+        <p>
+          PyInstaller frozen 실행 시에는 <code>sys._MEIPASS</code> 아래 번들 경로를 사용합니다.
+        </p>
+<pre><code>def resource_path(relative_path):
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)</code></pre>
+      </section>
+
+      <section id="sheets">
+        <h3>8. Google Sheets 연동</h3>
+        <p>사용자 OAuth 팝업 없이 내부 자동화를 위해 서비스 계정을 사용합니다.</p>
+        <div class="diagram">
+          <div class="diagram-label">append 시퀀스</div>
+          <pre class="mermaid">
+sequenceDiagram
+  participant UW as UploadWorker
+  participant GS as google_sheets
+  participant SA as Service Account JSON
+  participant API as Google Sheets API
+  participant RAW as Worksheet RAW
+  UW->>GS: append_rows(df)
+  GS->>SA: from_json_keyfile_name
+  SA-->>GS: credentials
+  GS->>API: authorize + open_by_url
+  GS->>RAW: append_rows(values, USER_ENTERED)
+          </pre>
+        </div>
+        <table>
+          <tr><th>항목</th><th>값 / 동작</th></tr>
+          <tr><td>인증</td><td><code>configs/doobeommarket-google_drive-api-key.json</code></td></tr>
+          <tr><td>대상</td><td>worksheet <code>RAW</code></td></tr>
+          <tr><td>쓰기</td><td><code>append_rows</code> + <code>USER_ENTERED</code></td></tr>
+        </table>
+        <div class="callout">
+          서비스 계정에 스프레드시트 편집 권한이 공유되어 있어야 하며, 키 파일은 저장소에 올리지 않습니다.
+        </div>
+      </section>
+
+      <section id="packaging">
+        <h3>9. 패키징 &amp; CI/CD</h3>
+        <p>비개발자(분석팀) 환경을 위해 Windows 설치형으로 배포합니다.</p>
+        <div class="diagram">
+          <div class="diagram-label">GitHub Actions 배포</div>
+          <pre class="mermaid">
+flowchart LR
+  A["workflow_dispatch"] --> B["Checkout"]
+  B --> C["AWS OIDC"]
+  C --> D["Python 3.10 + deps"]
+  D --> E["pyinstaller win.spec"]
+  E --> F["makensis installer.nsi"]
+  F --> G["debug 재빌드"]
+  G --> H["S3 upload"]
+          </pre>
+        </div>
+        <ul>
+          <li><strong>PyInstaller onedir</strong> — <code>dist/AnalysisUploader/</code></li>
+          <li><strong>NSIS</strong> — <code>$PROGRAMFILES\AnalysisUploader</code> + 바로가기</li>
+          <li><strong>버전 표시</strong> — short SHA를 UI에 노출</li>
+          <li><strong>산출물</strong> — <code>s3://doobeom-dev-deploy-store/AnalysisUploader/</code></li>
+        </ul>
+      </section>
+
+      <section id="patterns">
+        <h3>10. 기술 결정과 패턴</h3>
+        <table>
+          <tr><th>#</th><th>결정</th><th>이유</th></tr>
+          <tr><td>1</td><td>MVVM 분리</td><td>GUI 교체·CLI 재사용 시 비즈니스 로직 유지</td></tr>
+          <tr><td>2</td><td>LEFT JOIN 원가</td><td>원가 누락에도 매출 행 유지</td></tr>
+          <tr><td>3</td><td>채널 alias dict</td><td>원천 표기를 분석 표준명으로 흡수</td></tr>
+          <tr><td>4</td><td>QThread 업로드</td><td>Sheets 지연이 UI freeze로 이어지지 않음</td></tr>
+          <tr><td>5</td><td>서비스 계정</td><td>팀원별 OAuth·토큰 만료 제거</td></tr>
+          <tr><td>6</td><td>로컬 xlsx + Sheets</td><td>오프라인 검증본과 공유 원천 동시 확보</td></tr>
+          <tr><td>7</td><td>release/debug 이중 빌드</td><td>운영은 콘솔 숨김, 장애 대응은 로그</td></tr>
+          <tr><td>8</td><td>OIDC → S3</td><td>장기 AWS 키를 Actions에 넣지 않음</td></tr>
+        </table>
+      </section>
+
+      <section id="run">
+        <h3>11. 실행 가이드</h3>
+<pre><code># 가상환경
+uv venv && source .venv/bin/activate
+uv pip install -r requirements.txt
+
+python main.py          # GUI
+python main.py --cli    # CWD의 cj.xlsx, ccmc.xlsx
+
+# Windows 빌드
+pyinstaller win.spec
+makensis installer.nsi</code></pre>
+        <ol>
+          <li>CJ 출고 파일 첨부</li>
+          <li>CCMC 원가 파일 첨부</li>
+          <li><strong>업로드</strong> → 로컬 저장 + Sheets append</li>
+        </ol>
+      </section>
+
+      <section id="classes">
+        <h3>12. 핵심 클래스 맵</h3>
+        <div class="diagram">
+          <div class="diagram-label">클래스 관계</div>
+          <pre class="mermaid">
+classDiagram
+  class MainWidget {
+    +cj_file_path
+    +ccmc_file_path
+    +convert_button_clicked()
+  }
+  class MainViewModel {
+    +convert_button_clicked(fileInfo)
+  }
+  class UploadWorker {
+    +finished
+    +run()
+  }
+  class convert {
+    <<function>>
+    +convert(fileInfo) DataFrame
+  }
+  class google_sheets {
+    +append_rows(df)
+  }
+  MainWidget --> MainViewModel
+  MainWidget --> UploadWorker
+  MainViewModel --> convert
+  UploadWorker --> google_sheets
+          </pre>
+        </div>
+        <table>
+          <tr><th>이름</th><th>파일</th><th>역할</th></tr>
+          <tr><td><code>MainWidget</code></td><td><code>views/widgets/MainWidget.py</code></td><td>UI 오케스트레이션</td></tr>
+          <tr><td><code>MainViewModel</code></td><td><code>viewmodels/MainViewModel.py</code></td><td>변환 + 로컬 저장</td></tr>
+          <tr><td><code>convert()</code></td><td><code>models/convert.py</code></td><td>ETL 규칙</td></tr>
+          <tr><td><code>UploadWorker</code></td><td><code>views/util/UploadWorker.py</code></td><td>백그라운드 Sheets 업로드</td></tr>
+          <tr><td><code>Util</code></td><td><code>models/Util.py</code></td><td>경로·버전 해시</td></tr>
+        </table>
+      </section>
+
+      <footer>doobeom Portfolio · portfolio-importer · doobeom Infra</footer>
+    </div>
+  </div>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+  <script src="../assets/js/toc.js" defer></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/nav.js" defer></script>
+</body>
+</html>

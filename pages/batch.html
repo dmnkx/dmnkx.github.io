@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Batch IaC — doobeom Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/theme.css" />
+  <link rel="stylesheet" href="../assets/css/pages/batch.css" />
+  <link rel="stylesheet" href="../assets/css/nav.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="toc" aria-label="목차">
+      <p class="toc-label">Contents</p>
+      <nav>
+        <a href="#overview"><span class="num">01</span>프로젝트 개요</a>
+        <a href="#tech-stack"><span class="num">02</span>기술 스택</a>
+        <a href="#architecture"><span class="num">03</span>시스템 아키텍처</a>
+        <a href="#structure"><span class="num">04</span>프로젝트 구조</a>
+        <a href="#components"><span class="num">05</span>주요 컴포넌트</a>
+        <a href="#environments"><span class="num">06</span>멀티 환경</a>
+        <a href="#jobs"><span class="num">07</span>배치 작업</a>
+        <a href="#operations"><span class="num">08</span>배포·운영</a>
+        <a href="#achievements"><span class="num">09</span>기술적 성과</a>
+      </nav>
+    </aside>
+
+    <div class="wrap">
+      <details class="toc-mobile">
+        <summary>목차</summary>
+        <nav>
+          <a href="#overview">01 · 프로젝트 개요</a>
+          <a href="#tech-stack">02 · 기술 스택</a>
+          <a href="#architecture">03 · 시스템 아키텍처</a>
+          <a href="#structure">04 · 프로젝트 구조</a>
+          <a href="#components">05 · 주요 컴포넌트</a>
+          <a href="#environments">06 · 멀티 환경</a>
+          <a href="#jobs">07 · 배치 작업</a>
+          <a href="#operations">08 · 배포·운영</a>
+          <a href="#achievements">09 · 기술적 성과</a>
+        </nav>
+      </details>
+
+      <header class="hero">
+        <div class="hero-badge">Infrastructure as Code · AWS Batch</div>
+        <h1>두범(doobeom) Batch<br>스케줄링 인프라 프로젝트</h1>
+        <p>
+          Pulumi(Python) 기반 IaC로 AWS Batch 배치 작업 인프라를 선언적으로 관리합니다.
+          EventBridge Scheduler, Step Functions, Lambda를 연동해 정기 배치의 실행·모니터링·알림을 자동화합니다.
+        </p>
+        <div class="meta-row">
+          <span class="chip"><strong>회사</strong> 두범 (doobeom)</span>
+          <span class="chip"><strong>유형</strong> Batch IaC</span>
+          <span class="chip"><strong>언어</strong> Python / Pulumi</span>
+          <span class="chip"><strong>인프라</strong> AWS · ap-northeast-2</span>
+        </div>
+      </header>
+
+      <div class="content">
+      <div class="anonymize-note">
+        본 문서는 포트폴리오용입니다. 회사명·계정 ID·네트워크 리소스 ID 등 식별 정보는 가명 처리되었습니다.
+      </div>
+
+      <!-- 01 -->
+      <section id="overview">
+        <h2><span class="num">01</span> 프로젝트 개요</h2>
+        <p class="section-desc">
+          이커머스 플랫폼 <strong>두범(doobeom)</strong>의 백엔드 배치 작업(주문 처리, 포인트 만료, 랭킹 집계, 데이터 정책 등)을
+          AWS에서 안정적으로 스케줄링·실행하기 위한 Infrastructure as Code 프로젝트입니다.
+        </p>
+
+        <div class="stats">
+          <div class="stat"><div class="value">3</div><div class="label">배포 환경<br>dev / stg / prod</div></div>
+          <div class="stat"><div class="value">30+</div><div class="label">프로덕션<br>스케줄 작업</div></div>
+          <div class="stat"><div class="value">8+</div><div class="label">AWS 서비스<br>핵심 연동</div></div>
+          <div class="stat"><div class="value">6</div><div class="label">IAM Role<br>유형</div></div>
+        </div>
+
+        <h3>계층 구조 한눈에 보기</h3>
+        <div class="diagram">
+          <div class="diagram-title">시스템 계층 (Layers)</div>
+          <div class="layers">
+            <div class="layer l1">
+              <span class="tag">L1</span>
+              <div class="desc"><strong>트리거</strong> — EventBridge Scheduler (Cron, Asia/Seoul)</div>
+            </div>
+            <div class="layer l2">
+              <span class="tag">L2</span>
+              <div class="desc"><strong>오케스트레이션</strong> — Step Functions State Machine (성공/실패 분기)</div>
+            </div>
+            <div class="layer l3">
+              <span class="tag">L3</span>
+              <div class="desc"><strong>실행</strong> — AWS Batch · Compute Env ×3 · Job Queue · Definition</div>
+            </div>
+            <div class="layer l4">
+              <span class="tag">L4</span>
+              <div class="desc"><strong>애플리케이션</strong> — Docker(ECR) 안의 Java Spring Batch (ROOT.war)</div>
+            </div>
+            <div class="layer l5">
+              <span class="tag">L5</span>
+              <div class="desc"><strong>관측·알림</strong> — Lambda Slack 알림 · CloudWatch Logs · X-Ray</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="highlight-box">
+          <strong>핵심 가치:</strong> YAML만 수정하면 스케줄을 추가·비활성화할 수 있고,
+          <code>pulumi up</code> 한 번으로 IAM·Batch·Step Functions·EventBridge가 일관되게 프로비저닝됩니다.
+        </div>
+      </section>
+
+      <!-- 02 -->
+      <section id="tech-stack">
+        <h2><span class="num">02</span> 기술 스택</h2>
+        <p class="section-desc">언어, IaC, 클라우드, 런타임을 카테고리별로 정리했습니다.</p>
+
+        <div class="tech-grid">
+          <div class="tech-card"><div class="category">Language</div><div class="name">Python 3.x</div><div class="detail">IaC 코드 + Lambda 3.12</div></div>
+          <div class="tech-card"><div class="category">IaC</div><div class="name">Pulumi 3.x</div><div class="detail">Python SDK, S3 Backend</div></div>
+          <div class="tech-card"><div class="category">Cloud</div><div class="name">AWS</div><div class="detail">ap-northeast-2 (서울)</div></div>
+          <div class="tech-card"><div class="category">Batch App</div><div class="name">Java / Spring</div><div class="detail">ROOT.war, Spring Profiles</div></div>
+          <div class="tech-card"><div class="category">Container</div><div class="name">Docker + ECR</div><div class="detail">ECS_AL2023 AMI</div></div>
+          <div class="tech-card"><div class="category">Config</div><div class="name">YAML</div><div class="detail">Stack Config, PyYAML</div></div>
+          <div class="tech-card"><div class="category">VCS</div><div class="name">GitPython</div><div class="detail">Lambda 소스 클론</div></div>
+          <div class="tech-card"><div class="category">Archive</div><div class="name">pulumi_archive</div><div class="detail">Lambda ZIP 패키징</div></div>
+        </div>
+
+        <h3>스택 구성도</h3>
+        <div class="diagram">
+          <div class="diagram-title">기술 구성 (Technology Map)</div>
+          <div class="svg-wrap">
+            <svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans KR, sans-serif">
+              <!-- boxes -->
+              <rect x="20" y="20" width="160" height="70" rx="8" fill="#1e2a3a" stroke="#3d8bfd" stroke-width="1.5"/>
+              <text x="100" y="48" text-anchor="middle" fill="#3d8bfd" font-size="11" font-weight="600">IaC / CODE</text>
+              <text x="100" y="68" text-anchor="middle" fill="#e6edf5" font-size="13" font-weight="700">Python + Pulumi</text>
+
+              <rect x="220" y="20" width="160" height="70" rx="8" fill="#1e2a3a" stroke="#ff9900" stroke-width="1.5"/>
+              <text x="300" y="48" text-anchor="middle" fill="#ff9900" font-size="11" font-weight="600">ORCHESTRATION</text>
+              <text x="300" y="68" text-anchor="middle" fill="#e6edf5" font-size="12" font-weight="700">EventBridge · SFN</text>
+
+              <rect x="420" y="20" width="160" height="70" rx="8" fill="#1e2a3a" stroke="#22d3ee" stroke-width="1.5"/>
+              <text x="500" y="48" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="600">COMPUTE</text>
+              <text x="500" y="68" text-anchor="middle" fill="#e6edf5" font-size="12" font-weight="700">Batch · EC2 · ECS</text>
+
+              <rect x="540" y="120" width="160" height="70" rx="8" fill="#1e2a3a" stroke="#f89820" stroke-width="1.5"/>
+              <text x="620" y="148" text-anchor="middle" fill="#f89820" font-size="11" font-weight="600">WORKLOAD</text>
+              <text x="620" y="168" text-anchor="middle" fill="#e6edf5" font-size="12" font-weight="700">Java Spring Batch</text>
+
+              <rect x="280" y="120" width="160" height="70" rx="8" fill="#1e2a3a" stroke="#5ba3e8" stroke-width="1.5"/>
+              <text x="360" y="148" text-anchor="middle" fill="#5ba3e8" font-size="11" font-weight="600">NOTIFY</text>
+              <text x="360" y="168" text-anchor="middle" fill="#e6edf5" font-size="12" font-weight="700">Lambda 3.12</text>
+
+              <rect x="20" y="120" width="160" height="70" rx="8" fill="#1e2a3a" stroke="#a78bfa" stroke-width="1.5"/>
+              <text x="100" y="148" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="600">STATE / CONFIG</text>
+              <text x="100" y="168" text-anchor="middle" fill="#e6edf5" font-size="12" font-weight="700">S3 · YAML Stacks</text>
+
+              <rect x="150" y="210" width="420" height="50" rx="8" fill="#151c28" stroke="#2a3a4f" stroke-width="1.5"/>
+              <text x="360" y="240" text-anchor="middle" fill="#8a9bb0" font-size="12">Observability: CloudWatch Logs · AWS X-Ray · Slack</text>
+
+              <!-- arrows -->
+              <path d="M180 55 H215" stroke="#2a3a4f" stroke-width="1.5" marker-end="url(#arr)"/>
+              <path d="M380 55 H415" stroke="#2a3a4f" stroke-width="1.5" marker-end="url(#arr)"/>
+              <path d="M500 90 V115" stroke="#2a3a4f" stroke-width="1.5" marker-end="url(#arr)"/>
+              <path d="M420 155 H535" stroke="#2a3a4f" stroke-width="1.5" marker-end="url(#arr)"/>
+              <path d="M360 190 V208" stroke="#2a3a4f" stroke-width="1.5" marker-end="url(#arr)"/>
+              <defs>
+                <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                  <path d="M0,0 L6,3 L0,6" fill="#2a3a4f"/>
+                </marker>
+              </defs>
+            </svg>
+          </div>
+        </div>
+
+        <h3>Python 의존성</h3>
+        <pre><code>pulumi&gt;=3.0.0,&lt;4.0.0
+pulumi-aws&gt;=6.0.2,&lt;7.0.0
+PyYAML
+gitpython==3.1.43
+pulumi_archive==0.2.2</code></pre>
+
+        <h3>AWS 서비스</h3>
+        <div class="aws-grid">
+          <div class="aws-chip primary">AWS Batch</div>
+          <div class="aws-chip primary">EventBridge Scheduler</div>
+          <div class="aws-chip primary">Step Functions</div>
+          <div class="aws-chip primary">Lambda</div>
+          <div class="aws-chip">IAM</div>
+          <div class="aws-chip">EC2 / ECS</div>
+          <div class="aws-chip">ECR</div>
+          <div class="aws-chip">VPC</div>
+          <div class="aws-chip">CloudWatch Logs</div>
+          <div class="aws-chip">X-Ray</div>
+          <div class="aws-chip">S3</div>
+          <div class="aws-chip">Secrets Manager</div>
+          <div class="aws-chip">SES</div>
+          <div class="aws-chip">Cognito</div>
+          <div class="aws-chip">Auto Scaling</div>
+        </div>
+      </section>
+
+      <!-- 03 -->
+      <section id="architecture">
+        <h2><span class="num">03</span> 시스템 아키텍처</h2>
+        <p class="section-desc">런타임 실행 흐름과 IaC가 리소스를 만드는 순서를 도식으로 정리했습니다.</p>
+
+        <h3>런타임 실행 흐름</h3>
+        <div class="diagram">
+          <div class="diagram-title">Batch Job Lifecycle</div>
+          <div class="flow">
+            <div class="flow-row">
+              <div class="fbox aws hl">EventBridge Scheduler<small>Cron · Asia/Seoul</small></div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="flow-row">
+              <div class="fbox aws hl">Step Functions<small>State Machine · Timeout 3600s</small></div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="flow-row">
+              <div class="fbox aws">AWS Batch<small>submitJob.sync</small></div>
+              <span class="arrow h">→</span>
+              <div class="fbox">Compute Env ×3<small>EC2 · max 64 vCPU</small></div>
+              <span class="arrow h">→</span>
+              <div class="fbox java">Java Spring<small>ROOT.war / Docker</small></div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="flow-branch">
+              <div class="br">
+                <div class="lbl-ok">✓ Success</div>
+                <div class="fbox py ok">Lambda<small>Slack 알림</small></div>
+              </div>
+              <div class="br">
+                <div class="lbl-err">✗ Failure (Catch)</div>
+                <div class="fbox py err">Lambda<small>Slack 알림</small></div>
+              </div>
+            </div>
+            <div class="arrow" style="margin-top:0.75rem">↓</div>
+            <div class="flow-row">
+              <div class="fbox sm">CloudWatch Logs</div>
+              <div class="fbox sm">X-Ray Tracing</div>
+            </div>
+          </div>
+        </div>
+
+        <h3>IaC 배포 파이프라인</h3>
+        <div class="diagram">
+          <div class="diagram-title">pulumi up 리소스 생성 순서</div>
+          <div class="pipeline">
+            <div class="pipe-step">
+              <div class="step-n">STEP 1</div>
+              <div class="step-t">Batch</div>
+              <div class="step-d">IAM · Compute Env · Queue · Definition · Logs</div>
+            </div>
+            <div class="pipe-conn">→</div>
+            <div class="pipe-step">
+              <div class="step-n">STEP 2</div>
+              <div class="step-t">Lambda</div>
+              <div class="step-d">Git clone · ZIP · Function · Alias</div>
+            </div>
+            <div class="pipe-conn">→</div>
+            <div class="pipe-step">
+              <div class="step-n">STEP 3</div>
+              <div class="step-t">Step Functions</div>
+              <div class="step-d">State Machine · X-Ray · Logs</div>
+            </div>
+            <div class="pipe-conn">→</div>
+            <div class="pipe-step">
+              <div class="step-n">STEP 4</div>
+              <div class="step-t">EventBridge</div>
+              <div class="step-d">Schedule Group · Cron Schedules</div>
+            </div>
+          </div>
+          <div class="env-shared" style="margin-top:1.25rem">
+            State Backend → <code>s3://doobeom-devops-iac-state/batch</code>
+          </div>
+        </div>
+
+        <h3>리소스 의존성</h3>
+        <div class="diagram">
+          <div class="diagram-title">생성 의존성 그래프</div>
+          <div class="svg-wrap">
+            <svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans KR, sans-serif">
+              <defs>
+                <marker id="a2" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                  <path d="M0,0 L7,3.5 L0,7 Z" fill="#3d8bfd"/>
+                </marker>
+              </defs>
+              <!-- row 1 -->
+              <rect x="250" y="10" width="200" height="40" rx="6" fill="#1e2a3a" stroke="#a78bfa" stroke-width="1.5"/>
+              <text x="350" y="35" text-anchor="middle" fill="#e6edf5" font-size="12" font-weight="600">IAM Roles (Batch / ECS / EC2)</text>
+
+              <!-- row 2 -->
+              <rect x="40" y="90" width="160" height="40" rx="6" fill="#1e2a3a" stroke="#ff9900" stroke-width="1.5"/>
+              <text x="120" y="115" text-anchor="middle" fill="#e6edf5" font-size="12" font-weight="600">Compute Env ×3</text>
+
+              <rect x="270" y="90" width="160" height="40" rx="6" fill="#1e2a3a" stroke="#ff9900" stroke-width="1.5"/>
+              <text x="350" y="115" text-anchor="middle" fill="#e6edf5" font-size="12" font-weight="600">Job Queue</text>
+
+              <rect x="500" y="90" width="160" height="40" rx="6" fill="#1e2a3a" stroke="#ff9900" stroke-width="1.5"/>
+              <text x="580" y="115" text-anchor="middle" fill="#e6edf5" font-size="12" font-weight="600">Job Definition</text>
+
+              <!-- row 3 -->
+              <rect x="40" y="170" width="160" height="40" rx="6" fill="#1e2a3a" stroke="#5ba3e8" stroke-width="1.5"/>
+              <text x="120" y="195" text-anchor="middle" fill="#e6edf5" font-size="12" font-weight="600">Notify Lambda</text>
+
+              <rect x="270" y="170" width="160" height="40" rx="6" fill="#1e2a3a" stroke="#22d3ee" stroke-width="1.5"/>
+              <text x="350" y="195" text-anchor="middle" fill="#e6edf5" font-size="12" font-weight="600">State Machine</text>
+
+              <rect x="500" y="170" width="160" height="40" rx="6" fill="#1e2a3a" stroke="#3d8bfd" stroke-width="1.5"/>
+              <text x="580" y="195" text-anchor="middle" fill="#e6edf5" font-size="12" font-weight="600">Schedules</text>
+
+              <!-- row 4 -->
+              <rect x="200" y="260" width="300" height="40" rx="6" fill="#151c28" stroke="#2a3a4f" stroke-width="1.5"/>
+              <text x="350" y="285" text-anchor="middle" fill="#8a9bb0" font-size="12">YAML Config → 스케줄 / Definition / VPC</text>
+
+              <!-- lines -->
+              <line x1="350" y1="50" x2="120" y2="90" stroke="#3d8bfd" stroke-width="1.2" marker-end="url(#a2)"/>
+              <line x1="350" y1="50" x2="350" y2="90" stroke="#3d8bfd" stroke-width="1.2" marker-end="url(#a2)"/>
+              <line x1="200" y1="110" x2="270" y2="110" stroke="#3d8bfd" stroke-width="1.2" marker-end="url(#a2)"/>
+              <line x1="430" y1="110" x2="500" y2="110" stroke="#3d8bfd" stroke-width="1.2" marker-end="url(#a2)"/>
+              <line x1="120" y1="130" x2="120" y2="170" stroke="#3d8bfd" stroke-width="1.2" marker-end="url(#a2)"/>
+              <line x1="120" y1="190" x2="270" y2="190" stroke="#3d8bfd" stroke-width="1.2" marker-end="url(#a2)"/>
+              <line x1="430" y1="190" x2="500" y2="190" stroke="#3d8bfd" stroke-width="1.2" marker-end="url(#a2)"/>
+              <line x1="350" y1="210" x2="350" y2="260" stroke="#3d8bfd" stroke-width="1.2" opacity="0.4"/>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- 04 -->
+      <section id="structure">
+        <h2><span class="num">04</span> 프로젝트 구조</h2>
+        <p class="section-desc">모듈화된 Python 클래스로 AWS 리소스 유형별 책임을 분리했습니다.</p>
+
+        <div class="file-tree">
+<pre><span class="dir">sys-iac-doobeom-batch/</span>
+├── <span class="file">__main__.py</span>                 <span class="comment"># Pulumi 진입점 · 생성 순서 오케스트레이션</span>
+├── <span class="file">Pulumi.yaml</span>                 <span class="comment"># 프로젝트 메타 · S3 백엔드</span>
+├── <span class="file">Pulumi.batch-dev.yaml</span>       <span class="comment"># 개발 Stack Config</span>
+├── <span class="file">Pulumi.batch-stg.yaml</span>       <span class="comment"># 스테이징 Stack Config</span>
+├── <span class="file">Pulumi.batch-prod.yaml</span>      <span class="comment"># 프로덕션 Stack Config</span>
+├── <span class="file">requirements.txt</span>
+├── <span class="dir">model/</span>
+│   └── <span class="file">Job.py</span>                  <span class="comment"># @dataclass Job</span>
+└── <span class="dir">src/</span>
+    ├── <span class="file">Batch.py</span>
+    ├── <span class="file">EventBridge.py</span>
+    ├── <span class="file">Lambda.py</span>
+    ├── <span class="file">StepFunctions.py</span>
+    └── <span class="dir">role/</span>
+        ├── <span class="file">Role.py</span>             <span class="comment"># IAM 유틸리티</span>
+        ├── <span class="file">BatchRole.py</span>
+        ├── <span class="file">EventBridgeRole.py</span>
+        ├── <span class="file">LambdaRole.py</span>
+        └── <span class="file">SfnRole.py</span></pre>
+        </div>
+
+        <h3>클래스 관계</h3>
+        <div class="diagram">
+          <div class="diagram-title">모듈 호출 · 의존성</div>
+          <div class="flow">
+            <div class="flow-row">
+              <div class="fbox cfg hl">__main__.py<small>Stack 선택 · Config 로드</small></div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="flow-row">
+              <div class="fbox">Batch<small>+ BatchRole</small></div>
+              <span class="arrow h">→</span>
+              <div class="fbox">Lambda<small>+ LambdaRole</small></div>
+              <span class="arrow h">→</span>
+              <div class="fbox">StepFunctions<small>+ SfnRole</small></div>
+              <span class="arrow h">→</span>
+              <div class="fbox">EventBridge<small>+ EventBridgeRole</small></div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="flow-row">
+              <div class="fbox sm cfg">Role (base)</div>
+              <span class="arrow h">←</span>
+              <div class="fbox sm">create_role / create_policy / attach</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 05 -->
+      <section id="components">
+        <h2><span class="num">05</span> 주요 컴포넌트 상세</h2>
+        <p class="section-desc">각 모듈이 생성하는 AWS 리소스와 설정을 설명합니다.</p>
+
+        <h3>5.1 Batch 내부 구조</h3>
+        <div class="diagram">
+          <div class="diagram-title">Compute Environment → Queue → Definition</div>
+          <div class="svg-wrap">
+            <svg viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans KR, sans-serif">
+              <rect x="20" y="30" width="130" height="50" rx="6" fill="#1e2a3a" stroke="#ff9900" stroke-width="1.5"/>
+              <text x="85" y="52" text-anchor="middle" fill="#ff9900" font-size="11" font-weight="600">Compute 1</text>
+              <text x="85" y="68" text-anchor="middle" fill="#8a9bb0" font-size="10">min 0 · max 64</text>
+
+              <rect x="20" y="100" width="130" height="50" rx="6" fill="#1e2a3a" stroke="#ff9900" stroke-width="1.5"/>
+              <text x="85" y="122" text-anchor="middle" fill="#ff9900" font-size="11" font-weight="600">Compute 2</text>
+              <text x="85" y="138" text-anchor="middle" fill="#8a9bb0" font-size="10">EC2 · optimal</text>
+
+              <rect x="20" y="170" width="130" height="50" rx="6" fill="#1e2a3a" stroke="#ff9900" stroke-width="1.5"/>
+              <text x="85" y="192" text-anchor="middle" fill="#ff9900" font-size="11" font-weight="600">Compute 3</text>
+              <text x="85" y="208" text-anchor="middle" fill="#8a9bb0" font-size="10">ECS_AL2023</text>
+
+              <rect x="220" y="90" width="150" height="70" rx="8" fill="#1e2a3a" stroke="#3d8bfd" stroke-width="2"/>
+              <text x="295" y="120" text-anchor="middle" fill="#e6edf5" font-size="13" font-weight="700">Job Queue</text>
+              <text x="295" y="140" text-anchor="middle" fill="#8a9bb0" font-size="11">priority: 1 · ENABLED</text>
+
+              <rect x="450" y="20" width="220" height="55" rx="6" fill="#1e2a3a" stroke="#22d3ee" stroke-width="1.5"/>
+              <text x="560" y="42" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="600">job-definition</text>
+              <text x="560" y="58" text-anchor="middle" fill="#8a9bb0" font-size="10">2 vCPU · 4GB · 스케줄용</text>
+
+              <rect x="450" y="95" width="220" height="55" rx="6" fill="#1e2a3a" stroke="#a78bfa" stroke-width="1.5"/>
+              <text x="560" y="117" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="600">performance-definition</text>
+              <text x="560" y="133" text-anchor="middle" fill="#8a9bb0" font-size="10">8 vCPU · 32GB · 고성능</text>
+
+              <rect x="450" y="170" width="220" height="55" rx="6" fill="#1e2a3a" stroke="#34d399" stroke-width="1.5"/>
+              <text x="560" y="192" text-anchor="middle" fill="#34d399" font-size="11" font-weight="600">custom-definition</text>
+              <text x="560" y="208" text-anchor="middle" fill="#8a9bb0" font-size="10">2 vCPU · 4GB · 수동 실행</text>
+
+              <line x1="150" y1="55" x2="220" y2="110" stroke="#3d8bfd" stroke-width="1.2"/>
+              <line x1="150" y1="125" x2="220" y2="125" stroke="#3d8bfd" stroke-width="1.2"/>
+              <line x1="150" y1="195" x2="220" y2="140" stroke="#3d8bfd" stroke-width="1.2"/>
+              <line x1="370" y1="110" x2="450" y2="47" stroke="#3d8bfd" stroke-width="1.2"/>
+              <line x1="370" y1="125" x2="450" y2="122" stroke="#3d8bfd" stroke-width="1.2"/>
+              <line x1="370" y1="140" x2="450" y2="197" stroke="#3d8bfd" stroke-width="1.2"/>
+            </svg>
+          </div>
+        </div>
+
+        <table>
+          <thead><tr><th>리소스</th><th>설정</th><th>기술 포인트</th></tr></thead>
+          <tbody>
+            <tr><td>Compute Environment ×3</td><td>MANAGED / EC2, min 0, max 64, optimal</td><td>유휴 종료로 비용 절감, ECS_AL2023</td></tr>
+            <tr><td>Job Queue</td><td>우선순위 1, CE 3개 연결</td><td>고가용 다중 컴퓨팅</td></tr>
+            <tr><td>Job Definition</td><td>container / EC2, awslogs</td><td>일반·고성능·수동 3종</td></tr>
+            <tr><td>ECS Task Definition</td><td>awsvpc, EC2</td><td>Job Definition 연동</td></tr>
+          </tbody>
+        </table>
+
+        <h3>5.2 Step Functions 상태 전이</h3>
+        <div class="diagram">
+          <div class="diagram-title">State Machine ASCII → Visual</div>
+          <div class="flow">
+            <div class="flow-row"><div class="fbox aws hl">Submit Batch Job<small>batch:submitJob.sync</small></div></div>
+            <div class="flow-branch" style="margin-top:0.5rem">
+              <div class="br">
+                <div class="lbl-ok">Next</div>
+                <div class="fbox ok">Success<small>lambda:invoke</small></div>
+                <div class="arrow">↓ End</div>
+              </div>
+              <div class="br">
+                <div class="lbl-err">Catch States.ALL</div>
+                <div class="fbox err">Failure<small>lambda:invoke</small></div>
+                <div class="arrow">↓ End</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3>5.3 EventBridge → Step Functions Input</h3>
+        <pre><code>{
+  "JobDefinition": "db-{env}-batch-job-definition",
+  "JobName": "db-{env}-batch-execute-{schedule_name}",
+  "JobQueue": "db-{env}-batch-job-queue",
+  "Command": [
+    "java", "-jar",
+    "-Duser.country=KR",
+    "-Dspring.profiles.active={env}",
+    "-Djob.param.name={job_name}",
+    "/opt/app/ROOT.war"
+  ]
+}</code></pre>
+
+        <h3>5.4 Lambda 배포 흐름</h3>
+        <div class="diagram">
+          <div class="diagram-title">소스 배포 자동화</div>
+          <div class="pipeline">
+            <div class="pipe-step">
+              <div class="step-n">1</div>
+              <div class="step-t">Git Clone</div>
+              <div class="step-d">doobeom-sys/db-notify-lambda</div>
+            </div>
+            <div class="pipe-conn">→</div>
+            <div class="pipe-step">
+              <div class="step-n">2</div>
+              <div class="step-t">Archive</div>
+              <div class="step-d">pulumi_archive ZIP</div>
+            </div>
+            <div class="pipe-conn">→</div>
+            <div class="pipe-step">
+              <div class="step-n">3</div>
+              <div class="step-t">Deploy</div>
+              <div class="step-d">Python 3.12 Function</div>
+            </div>
+            <div class="pipe-conn">→</div>
+            <div class="pipe-step">
+              <div class="step-n">4</div>
+              <div class="step-t">Alias</div>
+              <div class="step-d">current + X-Ray</div>
+            </div>
+          </div>
+        </div>
+
+        <h3>5.5 IAM 권한 매트릭스</h3>
+        <div class="diagram">
+          <div class="diagram-title">서비스별 주요 Action</div>
+          <div class="iam-matrix">
+            <div class="h"></div>
+            <div class="h">Batch</div>
+            <div class="h">Lambda</div>
+            <div class="h">Logs/X-Ray</div>
+            <div class="h">States/ECR</div>
+            <div class="r">computer-role</div>
+            <div class="c y">●</div><div class="c n">○</div><div class="c y">●</div><div class="c n">○</div>
+            <div class="r">ecs-task-role</div>
+            <div class="c n">○</div><div class="c n">○</div><div class="c y">●</div><div class="c n">○</div>
+            <div class="r">eventbridge-role</div>
+            <div class="c y">●</div><div class="c n">○</div><div class="c y">●</div><div class="c y">●</div>
+            <div class="r">sfn-role</div>
+            <div class="c y">●</div><div class="c y">●</div><div class="c y">●</div><div class="c n">○</div>
+            <div class="r">lambda-role</div>
+            <div class="c n">○</div><div class="c n">○</div><div class="c y">●</div><div class="c n">○</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 06 -->
+      <section id="environments">
+        <h2><span class="num">06</span> 멀티 환경 구성</h2>
+        <p class="section-desc">Pulumi Stack으로 동일 코드베이스에서 환경별 리소스를 분리합니다.</p>
+
+        <div class="diagram">
+          <div class="diagram-title">환경 분리 (dev / stg / prod)</div>
+          <div class="env-cols">
+            <div class="env-col dev">
+              <div class="env-name">batch-dev</div>
+              <ul>
+                <li>Profile <span>doobeom-dev</span></li>
+                <li>ECR <span>db-dev-batch</span></li>
+                <li>스케줄 <span>일부</span></li>
+                <li>VPC <span>dev 전용</span></li>
+              </ul>
+            </div>
+            <div class="env-col stg">
+              <div class="env-name">batch-stg</div>
+              <ul>
+                <li>Profile <span>doobeom-dev</span></li>
+                <li>ECR <span>db-stg-batch</span></li>
+                <li>스케줄 <span>일부</span></li>
+                <li>VPC <span>stg 전용</span></li>
+              </ul>
+            </div>
+            <div class="env-col prod">
+              <div class="env-name">batch-prod</div>
+              <ul>
+                <li>Profile <span>doobeom-prod</span></li>
+                <li>ECR <span>db-prod-batch</span></li>
+                <li>스케줄 <span>30+</span></li>
+                <li>VPC <span>prod 격리</span></li>
+              </ul>
+            </div>
+          </div>
+          <div class="env-shared">
+            공통 코드베이스 · Stack Config만 환경별 YAML로 분기 · State: <code>s3://doobeom-devops-iac-state/batch</code>
+          </div>
+        </div>
+
+        <h3>Stack Config 예시</h3>
+        <pre><code>config:
+  vpc:
+    subnets: [subnet-xxx, subnet-yyy]
+    security_groups: [sg-zzz]
+  queue: [job-queue]
+  definition:
+    job-definition:
+      image: "{ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/db-dev-batch:latest"
+      cpu: 2
+      memory: 4000
+  eventbridge:
+    schedules:
+      - name: onlyDatabaseDestructionPolicy
+        cron: "30 08 * * ? *"
+        definition: job-definition
+        queue: job-queue
+        enabled: true</code></pre>
+      </section>
+
+      <!-- 07 -->
+      <section id="jobs">
+        <h2><span class="num">07</span> 운영 배치 작업 예시</h2>
+        <p class="section-desc">프로덕션에서 스케줄링되는 주요 작업 카테고리입니다.</p>
+
+        <div class="diagram">
+          <div class="diagram-title">도메인별 배치 맵</div>
+          <div class="svg-wrap">
+            <svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans KR, sans-serif">
+              <rect x="10" y="20" width="125" height="160" rx="8" fill="#1e2a3a" stroke="#ff9900" stroke-width="1.5"/>
+              <text x="72" y="50" text-anchor="middle" fill="#ff9900" font-size="12" font-weight="700">주문·배송</text>
+              <text x="72" y="80" text-anchor="middle" fill="#8a9bb0" font-size="10">CJ Order</text>
+              <text x="72" y="100" text-anchor="middle" fill="#8a9bb0" font-size="10">Delivery</text>
+              <text x="72" y="120" text-anchor="middle" fill="#8a9bb0" font-size="10">Nosnos</text>
+              <text x="72" y="140" text-anchor="middle" fill="#8a9bb0" font-size="10">Fast Delivery</text>
+
+              <rect x="150" y="20" width="125" height="160" rx="8" fill="#1e2a3a" stroke="#a78bfa" stroke-width="1.5"/>
+              <text x="212" y="50" text-anchor="middle" fill="#a78bfa" font-size="12" font-weight="700">포인트·쿠폰</text>
+              <text x="212" y="80" text-anchor="middle" fill="#8a9bb0" font-size="10">Point Expire</text>
+              <text x="212" y="100" text-anchor="middle" fill="#8a9bb0" font-size="10">Birthday Coupon</text>
+              <text x="212" y="120" text-anchor="middle" fill="#8a9bb0" font-size="10">Coupon Remind</text>
+
+              <rect x="290" y="20" width="125" height="160" rx="8" fill="#1e2a3a" stroke="#22d3ee" stroke-width="1.5"/>
+              <text x="352" y="50" text-anchor="middle" fill="#22d3ee" font-size="12" font-weight="700">회원·데이터</text>
+              <text x="352" y="80" text-anchor="middle" fill="#8a9bb0" font-size="10">User Ranking</text>
+              <text x="352" y="100" text-anchor="middle" fill="#8a9bb0" font-size="10">Withdrawal</text>
+              <text x="352" y="120" text-anchor="middle" fill="#8a9bb0" font-size="10">DB Destruction</text>
+              <text x="352" y="140" text-anchor="middle" fill="#8a9bb0" font-size="10">PII Notify</text>
+
+              <rect x="430" y="20" width="125" height="160" rx="8" fill="#1e2a3a" stroke="#34d399" stroke-width="1.5"/>
+              <text x="492" y="50" text-anchor="middle" fill="#34d399" font-size="12" font-weight="700">상품·마케팅</text>
+              <text x="492" y="80" text-anchor="middle" fill="#8a9bb0" font-size="10">Best Display</text>
+              <text x="492" y="100" text-anchor="middle" fill="#8a9bb0" font-size="10">FlareLane Sync</text>
+              <text x="492" y="120" text-anchor="middle" fill="#8a9bb0" font-size="10">Review Reward</text>
+
+              <rect x="570" y="20" width="120" height="160" rx="8" fill="#1e2a3a" stroke="#3d8bfd" stroke-width="1.5"/>
+              <text x="630" y="50" text-anchor="middle" fill="#3d8bfd" font-size="12" font-weight="700">결제·인프라</text>
+              <text x="630" y="80" text-anchor="middle" fill="#8a9bb0" font-size="10">Payment</text>
+              <text x="630" y="100" text-anchor="middle" fill="#8a9bb0" font-size="10">Toss Payout</text>
+              <text x="630" y="120" text-anchor="middle" fill="#8a9bb0" font-size="10">SES Bounce</text>
+            </svg>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <div class="card">
+            <h4>주문 · 배송</h4>
+            <div class="tag-list">
+              <span class="tag enabled">onlyCJOrderRegistration</span>
+              <span class="tag enabled">onlyDeliveryCompletedOrder</span>
+              <span class="tag enabled">onlyFastDeliveryCompleted</span>
+            </div>
+          </div>
+          <div class="card">
+            <h4>포인트 · 쿠폰</h4>
+            <div class="tag-list">
+              <span class="tag enabled">onlyPointExpirationCompleted</span>
+              <span class="tag enabled">onlyPublishBirthdayCoupon</span>
+              <span class="tag enabled">onlyCouponRemindingNotification</span>
+            </div>
+          </div>
+          <div class="card">
+            <h4>회원 · 데이터</h4>
+            <div class="tag-list">
+              <span class="tag enabled">onlyUserRankingMonthly</span>
+              <span class="tag enabled">onlyDatabaseDestructionPolicy</span>
+              <span class="tag enabled">onlyWithdrawalMembersDeletion</span>
+            </div>
+          </div>
+        </div>
+
+        <h3>Cron 표현식</h3>
+        <table>
+          <thead><tr><th>표현식</th><th>의미</th><th>예시</th></tr></thead>
+          <tbody>
+            <tr><td><code>05 0 1 * ? *</code></td><td>매월 1일 00:05</td><td>onlyUserRankingMonthly</td></tr>
+            <tr><td><code>30 08 * * ? *</code></td><td>매일 08:30</td><td>onlyDatabaseDestructionPolicy</td></tr>
+            <tr><td><code>05 08-13 * * ? *</code></td><td>매일 08~13시 매시 05분</td><td>onlyCJOrderRegistration</td></tr>
+            <tr><td><code>25 * * * ? *</code></td><td>매시 25분</td><td>onlyDailyOrderSummary</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 08 -->
+      <section id="operations">
+        <h2><span class="num">08</span> 배포 및 운영</h2>
+        <p class="section-desc">인프라 변경과 배치 운영 워크플로우입니다.</p>
+
+        <h3>운영 루프</h3>
+        <div class="diagram">
+          <div class="diagram-title">변경 → Preview → Deploy → Monitor</div>
+          <div class="pipeline">
+            <div class="pipe-step">
+              <div class="step-n">1</div>
+              <div class="step-t">YAML 수정</div>
+              <div class="step-d">스케줄 / Definition</div>
+            </div>
+            <div class="pipe-conn">→</div>
+            <div class="pipe-step">
+              <div class="step-n">2</div>
+              <div class="step-t">preview</div>
+              <div class="step-d">변경 영향 확인</div>
+            </div>
+            <div class="pipe-conn">→</div>
+            <div class="pipe-step">
+              <div class="step-n">3</div>
+              <div class="step-t">pulumi up</div>
+              <div class="step-d">리소스 반영</div>
+            </div>
+            <div class="pipe-conn">→</div>
+            <div class="pipe-step">
+              <div class="step-n">4</div>
+              <div class="step-t">Monitor</div>
+              <div class="step-d">Logs · SFN · Slack</div>
+            </div>
+          </div>
+        </div>
+
+        <pre><code>pulumi stack select batch-prod
+pulumi preview
+pulumi up
+
+# ECR 이미지 푸시
+aws ecr get-login-password --region ap-northeast-2 | \
+  docker login --username AWS --password-stdin {ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com
+docker build . -t db-batch
+docker tag db-batch:latest {ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/db-prod-batch:latest
+docker push {ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/db-prod-batch:latest</code></pre>
+
+        <h3>비용 최적화</h3>
+        <ul>
+          <li><code>min_vcpus: 0</code> — 유휴 시 EC2 자동 종료</li>
+          <li><code>instance_types: ["optimal"]</code> — 워크로드 맞춤 인스턴스 선택</li>
+          <li>환경별 스케줄 분리 — dev/stg에서 불필요 작업 비활성화</li>
+        </ul>
+      </section>
+
+      <!-- 09 -->
+      <section id="achievements">
+        <h2><span class="num">09</span> 기술적 성과 및 역량</h2>
+        <p class="section-desc">이 프로젝트에서 구현·운영한 핵심 역량입니다.</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <h4>Infrastructure as Code</h4>
+            <p>Pulumi Python SDK로 AWS 리소스를 코드화하고, S3 Remote Backend로 팀 State를 공유합니다.</p>
+          </div>
+          <div class="card">
+            <h4>이벤트 기반 오케스트레이션</h4>
+            <p>EventBridge → Step Functions → Batch → Lambda 파이프라인으로 실행과 실패 알림을 자동화합니다.</p>
+          </div>
+          <div class="card">
+            <h4>멀티 환경 DevOps</h4>
+            <p>Stack + YAML Config로 dev/stg/prod를 동일 코드에서 관리하고 VPC·ECR·스케줄을 분리합니다.</p>
+          </div>
+          <div class="card">
+            <h4>IAM 보안 설계</h4>
+            <p>서비스별 Role·Policy 분리, AssumeRole·PassRole Condition으로 최소 권한을 적용합니다.</p>
+          </div>
+          <div class="card">
+            <h4>Observability</h4>
+            <p>CloudWatch Logs(ALL), X-Ray(SFN/Lambda)로 실행 추적과 장애 분석을 지원합니다.</p>
+          </div>
+          <div class="card">
+            <h4>확장 가능한 스케줄링</h4>
+            <p>YAML에 스케줄만 추가하면 프로비저닝되며, Definition 3종으로 리소스를 차등 할당합니다.</p>
+          </div>
+        </div>
+      </section>
+      </div>
+
+      <footer>
+        <p>두범(doobeom) Batch IaC Portfolio · Pulumi + AWS · ap-northeast-2</p>
+        <p style="margin-top:0.4rem;font-size:0.78rem;">회사명·계정·리소스 ID는 포트폴리오용으로 가명 처리되었습니다.</p>
+      </footer>
+    </div>
+  </div>
+
+  <script src="../assets/js/toc.js" defer></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/nav.js" defer></script>
+</body>
+</html>

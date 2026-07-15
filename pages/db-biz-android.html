@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>두범비즈 Android — doobeom Portfolio</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/theme.css" />
+  <link rel="stylesheet" href="../assets/css/nav.css" />
+</head>
+<body>
+    <div class="layout">
+    <aside class="toc" aria-label="목차">
+      <p class="toc-label">Contents</p>
+      <nav>
+        <a href="#overview"><span class="num">01</span>Overview</a>
+        <a href="#role"><span class="num">02</span>역할과 포지션</a>
+        <a href="#stack"><span class="num">03</span>Tech Stack</a>
+        <a href="#arch"><span class="num">04</span>아키텍처</a>
+        <a href="#flow"><span class="num">05</span>화면 플로우</a>
+        <a href="#bridge"><span class="num">06</span>WebView Bridge</a>
+        <a href="#structure"><span class="num">07</span>디렉터리 구조</a>
+        <a href="#sdk"><span class="num">08</span>SDK 연동</a>
+        <a href="#security"><span class="num">09</span>보안</a>
+        <a href="#highlights"><span class="num">10</span>기술 하이라이트</a>
+      </nav>
+    </aside>
+
+    <div class="wrap">
+    <details class="toc-mobile">
+      <summary>목차</summary>
+      <nav>
+        <a href="#overview">01 · Overview</a>
+        <a href="#role">02 · 역할과 포지션</a>
+        <a href="#stack">03 · Tech Stack</a>
+        <a href="#arch">04 · 아키텍처</a>
+        <a href="#flow">05 · 화면 플로우</a>
+        <a href="#bridge">06 · WebView Bridge</a>
+        <a href="#structure">07 · 디렉터리 구조</a>
+        <a href="#sdk">08 · SDK 연동</a>
+        <a href="#security">09 · 보안</a>
+        <a href="#highlights">10 · 기술 하이라이트</a>
+      </nav>
+    </details>
+
+<div class="hero">
+        <h2>두범비즈 — B2B Hybrid Android App</h2>
+        <p>판매자/비즈니스를 위한 두범비즈 서비스를 WebView 하이브리드로 제공하는 네이티브 셸. 푸시·어트리뷰션·결제 앱 연동·권한 UX를 담당합니다.</p>
+        <div class="chips">
+          <span class="chip">Kotlin</span>
+          <span class="chip">Jetpack Compose</span>
+          <span class="chip">MVVM</span>
+          <span class="chip">WebView Bridge</span>
+          <span class="chip">v1.0.9</span>
+        </div>
+      </div>
+
+      <section id="overview">
+        <h3>1. Overview</h3>
+        <div class="card-grid">
+          <div class="card"><strong>패키지</strong><span>com.doobeom.biz</span></div>
+          <div class="card"><strong>타깃</strong><span>minSdk 29 / targetSdk 35</span></div>
+          <div class="card"><strong>Web Root</strong><span>https://m.doobeom.com</span></div>
+          <div class="card"><strong>유형</strong><span>B2B Hybrid Shell</span></div>
+        </div>
+        <p class="muted">Kotlin 2.1 · AGP 8.10 · Java 17 · Compose Material3 · Version Catalog</p>
+      </section>
+
+      <section id="role">
+        <h3>2. 역할과 포지션</h3>
+        <div class="diagram">
+          <div class="diagram-label">두범 모바일 생태계에서의 위치</div>
+          <pre class="mermaid">
+flowchart TB
+  subgraph Consumer["소비자"]
+    MA[두범마켓 Android]
+    MI[두범마켓 iOS]
+  end
+  subgraph B2B["비즈니스"]
+    BA[두범비즈 Android<br/>★ 본 문서]
+    BI[두범비즈 iOS]
+  end
+  subgraph Shared["공유 / 운영"]
+    SCR[리뷰 스크래퍼]
+  end
+  WEB[(m.doobeom.com)]
+  BA --> WEB
+  BI --> WEB
+  SCR -.-> BA
+  SCR -.-> MA
+          </pre>
+        </div>
+      </section>
+
+      <section id="stack">
+        <h3>3. Tech Stack</h3>
+        <div class="diagram">
+          <div class="diagram-label">레이어별 기술 스택</div>
+          <pre class="mermaid">
+block-beta
+  columns 1
+  block:ui:1
+    columns 3
+    A["Compose UI"] B["ViewBinding"] C["Material3"]
+  end
+  block:logic:1
+    columns 3
+    D["ViewModel"] E["LiveData/State"] F["Activities"]
+  end
+  block:bridge:1
+    columns 3
+    G["JS Bridge"] H["WebViewClient"] I["ChromeClient"]
+  end
+  block:sdk:1
+    columns 4
+    J["FlareLane"] K["Airbridge"] L["Firebase"] M["Facebook"]
+  end
+  block:net:1
+    columns 2
+    N["Retrofit"] O["EasyPrefs"]
+  end
+  ui --> logic --> bridge --> sdk
+  bridge --> net
+          </pre>
+        </div>
+        <table>
+          <tr><th>영역</th><th>기술</th></tr>
+          <tr><td>언어 / 빌드</td><td>Kotlin, AGP 8.10.1, Version Catalog</td></tr>
+          <tr><td>UI</td><td>Jetpack Compose + ViewBinding 혼용</td></tr>
+          <tr><td>네트워크</td><td>Retrofit, Orhanobut Logger</td></tr>
+          <tr><td>보안</td><td>RootBeer (루팅 탐지)</td></tr>
+        </table>
+      </section>
+
+      <section id="arch">
+        <h3>4. 아키텍처</h3>
+        <p>경량 <strong>MVVM + Hybrid WebView</strong> 구조입니다. 비즈니스 로직의 대부분은 웹에서 처리하고, 네이티브는 셸·브릿지·SDK 어댑터 역할을 합니다.</p>
+        <div class="diagram">
+          <div class="diagram-label">계층 구조</div>
+          <pre class="mermaid">
+flowchart TB
+  subgraph Presentation
+    V[views/activities<br/>Splash · Permission · WebView]
+    C[views/components<br/>Compose UI]
+    VM[viewmodels]
+  end
+  subgraph DomainLite
+    M[models/web<br/>Bridge · Clients]
+    S[models/Service]
+  end
+  subgraph Infra
+    U[utils<br/>Jailbreak · Device]
+    SDK[3rd Party SDKs]
+    WEB[Remote Web App]
+  end
+  V --> VM
+  C --> VM
+  VM --> M
+  M --> WEB
+  M --> S
+  S --> SDK
+  V --> U
+          </pre>
+        </div>
+      </section>
+
+      <section id="flow">
+        <h3>5. 화면 플로우</h3>
+        <div class="flow-boxes">
+          <div class="b">Splash</div><span class="a">→</span>
+          <div class="b">Permission</div><span class="a">→</span>
+          <div class="b">WebView</div>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">사용자 진입 시퀀스</div>
+          <pre class="mermaid">
+sequenceDiagram
+  participant U as User
+  participant S as SplashActivity
+  participant P as PermissionActivity
+  participant W as WebViewActivity
+  participant H as m.doobeom.com
+  participant F as FlareLane/Airbridge
+
+  U->>S: 앱 실행
+  S->>S: 초기화 / SDK boot
+  S->>P: 권한 미허용 시
+  P->>P: 카메라·앨범·전화 안내
+  P->>W: 허용 완료
+  W->>H: WebView load
+  W->>F: 구독 / 어트리뷰션
+  H-->>W: JS Bridge 호출
+  W-->>H: Native API 응답
+          </pre>
+        </div>
+      </section>
+
+      <section id="bridge">
+        <h3>6. WebView Bridge</h3>
+        <p>웹과 네이티브는 JS Interface를 통해 설정, 푸시 구독, 이벤트 트래킹 등을 교환합니다.</p>
+        <div class="diagram">
+          <div class="diagram-label">브릿지 통신 모델</div>
+          <pre class="mermaid">
+flowchart LR
+  subgraph Web["Web (JS)"]
+    J1[설정 열기]
+    J2[FlareLane 구독/해제]
+    J3[userId 설정]
+    J4[Event Tracking]
+  end
+  subgraph Native["Android Native"]
+    B[JS Bridge]
+    SET[System Settings]
+    FL[FlareLane SDK]
+    AB[Airbridge]
+  end
+  J1 --> B --> SET
+  J2 --> B --> FL
+  J3 --> B --> FL
+  J4 --> B --> AB
+          </pre>
+        </div>
+        <h4>딥링크 / App Links</h4>
+        <ul>
+          <li>커스텀 스킴: <code>doobeom://</code></li>
+          <li>Airbridge: <code>doobeom.abr.ge</code>, <code>doobeom.airbridge.io</code></li>
+          <li>결제앱 queries: 토스, KB Pay, 삼성페이 등</li>
+        </ul>
+      </section>
+
+      <section id="structure">
+        <h3>7. 디렉터리 구조</h3>
+        <div class="diagram">
+          <div class="diagram-label">소스 트리</div>
+          <pre class="mermaid">
+flowchart TD
+  ROOT[db-biz-android]
+  ROOT --> APP[app/src/main/kotlin/.../doobeom]
+  ROOT --> GR[gradle/libs.versions.toml]
+  ROOT --> KS[keystore/]
+  APP --> VA[views/activities]
+  APP --> VC[views/components]
+  APP --> VM[viewmodels]
+  APP --> MW[models/web]
+  APP --> MS[models/Service]
+  APP --> TH[ui/theme]
+  APP --> UT[utils]
+          </pre>
+        </div>
+      </section>
+
+      <section id="sdk">
+        <h3>8. SDK 연동 맵</h3>
+        <div class="diagram">
+          <div class="diagram-label">외부 서비스 연동</div>
+          <pre class="mermaid">
+mindmap
+  root((두범비즈<br/>Android))
+    Messaging
+      FlareLane Push
+    Attribution
+      Airbridge
+      App Links
+    Analytics
+      Firebase Analytics
+      Facebook SDK
+    Security
+      RootBeer
+    Network
+      Retrofit
+    Storage
+      EasyPrefs
+          </pre>
+        </div>
+      </section>
+
+      <section id="security">
+        <h3>9. 보안</h3>
+        <div class="diagram">
+          <div class="diagram-label">루팅 / 무결성 대응</div>
+          <pre class="mermaid">
+flowchart LR
+  A[앱 시작] --> B{RootBeer<br/>탐지}
+  B -->|정상| C[정상 플로우]
+  B -->|루팅 의심| D[차단 / 경고]
+  C --> E[WebView + Bridge]
+  E --> F[Release R8 minify]
+  F --> G[NDK full debug symbols]
+          </pre>
+        </div>
+      </section>
+
+      <section id="highlights">
+        <h3>10. 기술 하이라이트</h3>
+        <div class="card-grid">
+          <div class="card"><strong>Compose 혼용</strong><span>권한·스플래시 UI를 Compose로 구성</span></div>
+          <div class="card"><strong>결제 Deep Link</strong><span>카드/페이 앱 package queries</span></div>
+          <div class="card"><strong>어트리뷰션</strong><span>Airbridge App Links 통합</span></div>
+          <div class="card"><strong>릴리스 최적화</strong><span>R8 + NDK 심볼</span></div>
+        </div>
+      </section>
+
+      <footer>doobeom Portfolio · portfolio-db-biz-android · doobeom Mobile</footer>
+    </div>
+  </div>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    const links = document.querySelectorAll('aside nav a');
+    const secs = [...links].map(a => document.querySelector(a.getAttribute('href')));
+    const onScroll = () => {
+      let cur = secs[0];
+      for (const s of secs) if (s && s.getBoundingClientRect().top <= 120) cur = s;
+      links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + (cur && cur.id)));
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  </script>
+    <script src="../assets/js/toc.js" defer></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/nav.js" defer></script>
+</body>
+</html>

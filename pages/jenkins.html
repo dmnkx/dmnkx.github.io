@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jenkins Pipeline — doobeom Portfolio</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/theme.css" />
+  <link rel="stylesheet" href="../assets/css/pages/jenkins.css" />
+  <link rel="stylesheet" href="../assets/css/nav.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="toc" aria-label="목차">
+      <p class="toc-label">Contents</p>
+      <nav>
+        <a href="#overview"><span class="num">01</span>프로젝트 개요</a>
+        <a href="#architecture"><span class="num">02</span>전체 아키텍처</a>
+        <a href="#build-pipeline"><span class="num">03</span>BuildPipeline 워크플로</a>
+        <a href="#aws"><span class="num">04</span>AWS 연동 계층</a>
+        <a href="#deploy-flow"><span class="num">05</span>배포 &amp; 승인 플로우</a>
+        <a href="#slack"><span class="num">06</span>Slack 알림</a>
+        <a href="#services"><span class="num">07</span>지원 서비스 맵</a>
+        <a href="#tech"><span class="num">08</span>기술 스택</a>
+        <a href="#usage"><span class="num">09</span>사용 예시</a>
+        <a href="#testing"><span class="num">10</span>테스트 &amp; 품질</a>
+        <a href="#contribution"><span class="num">11</span>기여 &amp; 역할</a>
+        <a href="#summary"><span class="num">12</span>요약</a>
+      </nav>
+    </aside>
+
+    <div class="wrap">
+    <details class="toc-mobile">
+      <summary>목차</summary>
+      <nav>
+        <a href="#overview">01 · 프로젝트 개요</a>
+        <a href="#architecture">02 · 전체 아키텍처</a>
+        <a href="#build-pipeline">03 · BuildPipeline 워크플로</a>
+        <a href="#aws">04 · AWS 연동 계층</a>
+        <a href="#deploy-flow">05 · 배포 &amp; 승인 플로우</a>
+        <a href="#slack">06 · Slack 알림</a>
+        <a href="#services">07 · 지원 서비스 맵</a>
+        <a href="#tech">08 · 기술 스택</a>
+        <a href="#usage">09 · 사용 예시</a>
+        <a href="#testing">10 · 테스트 &amp; 품질</a>
+        <a href="#contribution">11 · 기여 &amp; 역할</a>
+        <a href="#summary">12 · 요약</a>
+      </nav>
+    </details>
+
+<header class="hero">
+    <span class="badge">Jenkins Shared Library Portfolio</span>
+    <h2>두범(doobeom) Jenkins Pipeline<br/>공유 라이브러리</h2>
+    <p>
+      다수 Git 조직·서비스의 빌드·배포를 표준화한 Jenkins Shared Library입니다.
+      Groovy 기반 DSL로 체크아웃부터 CodeDeploy/Lambda 배포, Slack 알림, 승인까지 한 흐름으로 자동화합니다.
+    </p>
+    <div class="meta-row">
+      <span class="chip"><strong>회사</strong> 두범 (doobeom)</span>
+      <span class="chip"><strong>유형</strong> CI/CD 플랫폼</span>
+      <span class="chip"><strong>언어</strong> Groovy / Gradle</span>
+      <span class="chip"><strong>인프라</strong> AWS · Jenkins</span>
+    </div>
+  </header>
+
+  <!-- 1 -->
+  <section id="overview">
+    <h2><span class="num">1</span> 프로젝트 개요</h2>
+    <p>
+      <strong>두범 Jenkins Pipeline 공유 라이브러리</strong>는 Jenkinsfile마다 반복되던 AWS CLI 호출, Git 조작,
+      Slack 웹훅, 배포 대기 로직을 공통 모듈로 추출한 사내 CI/CD 플랫폼입니다.
+    </p>
+    <p>
+      Jenkins Global Pipeline Library로 등록되며, 각 서비스 Jenkinsfile에서는
+      <code>@Library('doobeom-lib') _</code> 한 줄로 로드한 뒤
+      <code>initialize</code> → <code>buildPipeline(buildConfig(...))</code> 패턴으로 배포 파이프라인을 구성합니다.
+    </p>
+
+    <div class="card-grid" id="problem">
+      <div class="stat-card"><div class="n">27+</div><div class="t">vars 글로벌 스텝</div></div>
+      <div class="stat-card"><div class="n">65+</div><div class="t">Groovy 도메인 클래스</div></div>
+      <div class="stat-card"><div class="n">30+</div><div class="t">서비스 Jenkinsfile</div></div>
+      <div class="stat-card"><div class="n">14</div><div class="t">표준 빌드 단계</div></div>
+    </div>
+
+    <h3>해결한 문제</h3>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  subgraph Before["Before ❌"]
+    J1[Jenkinsfile A]
+    J2[Jenkinsfile B]
+    J3[Jenkinsfile C]
+    J1 --> Dup1["sh aws s3 cp ..."]
+    J2 --> Dup2["sh aws s3 cp ..."]
+    J3 --> Dup3["hardcoded Slack URL"]
+  end
+
+  subgraph After["After ✅"]
+    Lib["doobeom-lib<br/>Shared Library"]
+    JA[Jenkinsfile A] --> Lib
+    JB[Jenkinsfile B] --> Lib
+    JC[Jenkinsfile C] --> Lib
+    Lib --> AWS[AWS Wrapper]
+    Lib --> Slack[Slack Sender]
+    Lib --> WF[BuildWorkflow]
+  end
+
+  Before -.->|"표준화"| After
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 1. 중복 스크립트 제거 → 공유 라이브러리 표준화</p>
+
+    <ul id="goals">
+      <li><strong>중복 제거</strong> — Jenkinsfile마다 복사·붙여넣기하던 배포 스크립트를 한곳으로 집중</li>
+      <li><strong>안전 배포</strong> — 태그 중복 검사, 배포/보안 승인(input), <code>ACTUAL_DISTRIBUTION</code> 플래그로 Dry-run 지원</li>
+      <li><strong>가시성</strong> — Slack 채널별 승인 요청·배포 결과·실패 알림 자동화</li>
+      <li><strong>확장성</strong> — PHP / Java / Node / Python / Lambda / Batch 등 다언어·다배포 대상 지원</li>
+    </ul>
+  </section>
+
+  <!-- 2 -->
+  <section id="architecture">
+    <h2><span class="num">2</span> 전체 아키텍처</h2>
+    <p>
+      라이브러리는 <strong>진입점(vars)</strong>과 <strong>도메인 로직(src)</strong>을 분리합니다.
+      Jenkinsfile은 vars API만 호출하고, AWS·Git·Slack 상세 구현은 <code>co.doobeom.*</code> 패키지에 둡니다.
+    </p>
+
+    <div class="diagram" id="layers">
+      <pre class="mermaid">
+flowchart TB
+  subgraph JF["Service Jenkinsfiles"]
+    direction LR
+    M[Market Web]
+    L[Lambda]
+    D[Data / ETL]
+    C[Corp Web]
+  end
+
+  subgraph VARS["vars/ — Pipeline DSL"]
+    init[initialize]
+    bp[buildPipeline]
+    bc[buildConfig]
+    slack[slack / approve]
+    awsvars[s3 · lambda · deploy · ssm · ecr ...]
+  end
+
+  subgraph SRC["src — Domain Logic"]
+    WF[BuildWorkflow]
+    AWS[aws.* Command Classes]
+    MSG[message / Slack]
+    GIT[git]
+    RES[result Parsers]
+    EXEC[AwsExecutor]
+  end
+
+  subgraph EXT["External Systems"]
+    GH[GitHub]
+    S3[(S3)]
+    CD[CodeDeploy]
+    LM[Lambda]
+    PS[Parameter Store]
+    SL[Slack]
+  end
+
+  JF --> VARS
+  VARS --> SRC
+  WF --> AWS
+  AWS --> EXEC
+  EXEC --> EXT
+  MSG --> SL
+  GIT --> GH
+  bp --> WF
+  init --> PS
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 2. 계층형 아키텍처 — Jenkinsfile → vars → src → AWS/Slack</p>
+
+    <div class="role-box">
+      <div class="card">
+        <h3 style="margin-top:0">vars (진입점)</h3>
+        <p>Jenkinsfile에서 <code>git.commitHash()</code>, <code>s3.cp(...)</code>, <code>approve.withDeploy()</code>처럼
+        전역 스텝처럼 호출하는 얇은 래퍼입니다.</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">src (구현)</h3>
+        <p>명령 조립, 실행, 결과 파싱, 예외, 워크플로 오케스트레이션 등
+        테스트 가능한 Groovy 클래스가 위치합니다.</p>
+      </div>
+    </div>
+
+    <h3 id="repo-structure">저장소 구조</h3>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  ROOT["doobeom-jenkins-pipeline/"]
+  ROOT --> CFG["config/<br/>users.yaml"]
+  ROOT --> PIPE["pipeline/<br/>조직별 Jenkinsfile"]
+  ROOT --> V["vars/<br/>글로벌 스텝"]
+  ROOT --> S["src/.../co/doobeom/<br/>도메인 패키지"]
+  ROOT --> T["src/test/<br/>단위 테스트"]
+  ROOT --> G["build.gradle"]
+
+  PIPE --> P1[doobeommarket]
+  PIPE --> P2[doobeom-data]
+  PIPE --> P3[doobeom-corp]
+  PIPE --> P4[doobeom-sys]
+  PIPE --> P5[lambda / util]
+
+  S --> A[aws]
+  S --> W[workflow]
+  S --> M[message]
+  S --> Gi[git]
+  S --> E[exec / result]
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 3. 모노레포식 공유 라이브러리 + 서비스별 파이프라인 정의</p>
+  </section>
+
+  <!-- 3 -->
+  <section id="build-pipeline">
+    <h2><span class="num">3</span> BuildPipeline 워크플로</h2>
+    <p>
+      핵심은 <code>BuildWorkflow</code>입니다. <code>buildConfig</code>로 넘긴 Closure/설정을 받아
+      <strong>항상 동일한 순서</strong>로 단계를 실행합니다. 서비스별 차이는 Closure 내용만으로 표현합니다.
+    </p>
+
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  participant JF as Jenkinsfile
+  participant Init as initialize
+  participant BP as buildPipeline
+  participant WF as BuildWorkflow
+  participant AWS as AWS / Git
+
+  JF->>Init: organization, repo, profile, SSM
+  Init->>AWS: Parameter Store / Secrets Manager
+  Init-->>JF: env.* 세팅
+  JF->>BP: buildConfig(language, build, deploy...)
+  BP->>WF: run(actualDistribution)
+  loop 각 WorkflowStep
+    WF->>WF: echoTitle + closure.call()
+    WF->>AWS: checkout / build / upload / deploy
+  end
+  WF-->>JF: 완료 / 실패
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 4. initialize → buildPipeline → BuildWorkflow 시퀀스</p>
+
+    <h3 id="steps">표준 14단계 파이프라인</h3>
+    <div class="flow-steps">
+      <span class="step">BEFORE CHECKOUT</span><span class="arrow">→</span>
+      <span class="step">CHECKOUT</span><span class="arrow">→</span>
+      <span class="step">LOAD PARAMETERS</span><span class="arrow">→</span>
+      <span class="step">PREPARE</span><span class="arrow">→</span>
+      <span class="step">COMMON REPLACE</span><span class="arrow">→</span>
+      <span class="step">ARTIFACT*</span><span class="arrow">→</span>
+      <span class="step">APPSPEC REPLACE</span><span class="arrow">→</span>
+      <span class="step">BEFORE BUILD</span><span class="arrow">→</span>
+      <span class="step">BUILD</span><span class="arrow">→</span>
+      <span class="step">AFTER BUILD</span><span class="arrow">→</span>
+      <span class="step">ARCHIVE</span><span class="arrow">→</span>
+      <span class="step">UPLOAD</span><span class="arrow">→</span>
+      <span class="step">DEPLOY</span><span class="arrow">→</span>
+      <span class="step">COMPLETION</span>
+    </div>
+
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TD
+  A[BEFORE CHECKOUT<br/>scripts/docker 복사] --> B[CHECKOUT<br/>Git 소스]
+  B --> C[LOAD PARAMETERS<br/>SSM Closure]
+  C --> D[PREPARE<br/>승인·태그·FILENAME]
+  D --> E[COMMON REPLACE<br/>소스 플레이스홀더]
+  E --> F{artifacts?}
+  F -->|Yes| G[BUILD / UPLOAD / DEPLOY<br/>ARTIFACT × N]
+  F -->|No| H[APPSPEC REPLACE]
+  G --> H
+  H --> I[BEFORE BUILD]
+  I --> J[BUILD<br/>Docker or Host]
+  J --> K[AFTER BUILD]
+  K --> L[ARCHIVE → zip]
+  L --> M[UPLOAD → S3]
+  M --> N{ACTUAL_DISTRIBUTION?}
+  N -->|true| O[DEPLOY<br/>CodeDeploy / Lambda]
+  N -->|false| P[DEPLOY 스킵]
+  O --> Q[COMPLETION<br/>Git Tag]
+  P --> Q
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 5. BuildWorkflow 단계 분기 (아티팩트·실제배포 플래그)</p>
+
+    <table>
+      <thead>
+        <tr><th>단계</th><th>역할</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>BEFORE CHECKOUT</td><td>프로필별 scripts/docker를 워크스페이스 상위로 복사, zip 정리</td></tr>
+        <tr><td>CHECKOUT</td><td><code>gitUrl</code> + <code>gitBranch</code>로 애플리케이션 소스 체크아웃</td></tr>
+        <tr><td>PREPARE</td><td>배포 승인, 태그 중복 검사, 커밋 해시·파일명 세팅</td></tr>
+        <tr><td>BUILD</td><td><code>BuilderFactory</code> — language/dockerImage에 따라 호스트 또는 컨테이너에서 빌드</td></tr>
+        <tr><td>UPLOAD / DEPLOY</td><td>S3 업로드 후 CodeDeploy 생성·폴링 또는 Lambda 코드/레이어 갱신</td></tr>
+        <tr><td>COMPLETION</td><td>배포 성공 시 Git 태그 부여 등 후처리</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="buildconfig">buildConfig DSL</h3>
+    <p>
+      서비스별로 달라지는 부분을 Map/Closure DSL로 주입합니다.
+      불필요한 단계는 Closure를 비우거나 생략하면 됩니다.
+    </p>
+    <div class="diagram">
+      <pre class="mermaid">
+mindmap
+  root((buildConfig))
+    기본설정
+      language
+      dockerImage
+      gitUrl / gitBranch
+      parameterStore
+    훅_Closure
+      prepare
+      commonReplace
+      appSpecReplace
+      beforeBuild / build / afterBuild
+      archive / upload / deploy
+      completion
+    확장
+      artifacts[]
+        name
+        build
+        upload
+        deploy
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 6. buildConfig 옵션 맵</p>
+  </section>
+
+  <!-- 4 -->
+  <section id="aws">
+    <h2><span class="num">4</span> AWS 연동 계층</h2>
+    <p>
+      <strong>「AWS CLI 명령 하나 = Groovy 클래스 하나」</strong> 원칙으로 래핑했습니다.
+      <code>AwsCommand</code> 추상 클래스를 상속하고, <code>AwsExecutor</code>가 실행 결과(<code>ProcessResult</code>)를
+      도메인 Result 객체로 파싱합니다.
+    </p>
+
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  V[vars/s3.groovy] --> C[aws.s3.Cp]
+  C --> E[AwsExecutor]
+  E --> CLI["aws s3 cp ..."]
+  CLI --> PR[ProcessResult]
+  PR --> R[Result Object]
+  R --> V
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 7. AWS 명령 실행 파이프라인</p>
+
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+  AwsCommand --> batch
+  AwsCommand --> deploy
+  AwsCommand --> ecr
+  AwsCommand --> lambda
+  AwsCommand --> logs
+  AwsCommand --> s3
+  AwsCommand --> ssm
+  AwsCommand --> secretsmanager
+  AwsCommand --> stepfunctions
+
+  batch --- B1[DescribeJobs]
+  deploy --- D1[CreateDeployment]
+  deploy --- D2[GetDeployment]
+  lambda --- L1[UpdateFunctionCode]
+  lambda --- L2[PublishLayerVersion]
+  lambda --- L3[GetAlias]
+  s3 --- S1[Cp / Mv / Sync]
+  ssm --- P1[GetParameters]
+  ecr --- E1[DockerLogin]
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 8. co.doobeom.aws 패키지 맵</p>
+
+    <div class="callout">
+      Map으로 옵션을 넘기고, stdout/stderr/exitCode를 일관 처리하며,
+      <code>AwsException</code> / <code>AwsParsingException</code>으로 실패 유형을 구분합니다.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="deploy-flow">
+    <h2><span class="num">5</span> 배포 &amp; 승인 플로우</h2>
+    <p>
+      운영(prod) 배포는 단순 빌드가 아니라 <strong>승인 게이트</strong>가 있는 워크플로입니다.
+      Slack으로 승인 요청을 보내고, Jenkins <code>input</code>으로 승인자 검증 후 배포가 진행됩니다.
+    </p>
+
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TD
+  Start([배포 Job 시작]) --> Init[initialize<br/>SSM / Secrets]
+  Init --> Prep[PREPARE]
+  Prep --> TagCheck{동일 태그<br/>이미 존재?}
+  TagCheck -->|Yes| Abort1[ABORTED]
+  TagCheck -->|No| Approvals
+
+  subgraph Approvals["승인 게이트"]
+    A1[approve.withDeploy<br/>배포 승인]
+    A2[approve.withChecklist<br/>보안 검토]
+    A1 --> A2
+  end
+
+  Approvals -->|거절| Abort2[ABORTED]
+  Approvals -->|승인| Build[BUILD → ARCHIVE → UPLOAD]
+  Build --> Dist{ACTUAL_DISTRIBUTION?}
+  Dist -->|false| Skip[DEPLOY 스킵]
+  Dist -->|true| CD[CodeDeploy create<br/>+ status polling]
+  CD --> Wait{Succeeded?}
+  Wait -->|Yes| Tag[Git Tag + Slack 성공]
+  Wait -->|No| Fail[실패 알림]
+  Skip --> Done([종료])
+  Tag --> Done
+  Fail --> Done
+  Abort1 --> Done
+  Abort2 --> Done
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 9. 운영 배포 게이트 (태그·승인·실제배포)</p>
+
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  participant Job as Jenkins Job
+  participant Ap as approve
+  participant Sl as Slack
+  participant Human as Approver
+
+  Job->>Ap: withDeploy()
+  Ap->>Sl: 배포 승인 요청 메시지
+  Sl->>Human: 채널 알림
+  Job->>Human: input 승인 대기 (timeout 10m)
+  Human->>Job: submitter 확인
+  alt 허용된 승인자
+    Job->>Sl: 승인 결과 통지
+    Job->>Job: 다음 단계 진행
+  else 비승인자 / 타임아웃
+    Job->>Sl: 거절/실패 통지
+    Job-->>Job: ABORTED
+  end
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 10. Slack ↔ Jenkins input 승인 시퀀스</p>
+
+    <h3>CodeDeploy 대기 루프</h3>
+    <p>
+      <code>deploy.deployAndWait</code>는 배포 생성 후 최대 50회 상태 폴링하여
+      <code>Succeeded</code>일 때만 성공으로 처리합니다.
+    </p>
+  </section>
+
+  <!-- 6 -->
+  <section id="slack">
+    <h2><span class="num">6</span> Slack 알림</h2>
+    <p>
+      <code>SlackChannel</code> / <code>SlackSender</code> / Attachment Assembler로
+      배포 결과, 승인 요청, 실패·중단을 채널별로 포맷팅해 발송합니다.
+    </p>
+
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  Post["post blocks<br/>success / failure / aborted"] --> CPS[commonPost*]
+  CPS --> SlackVars[vars/slack]
+  SlackVars --> Sender[SlackSender]
+  Sender --> Att[Attachment<br/>Result / Approve]
+  Att --> CH[Channel Config]
+  CH --> Hook[Webhook]
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 11. Slack 메시지 조립 구조</p>
+
+    <div class="tag-row">
+      <span class="tag">배포 성공/실패</span>
+      <span class="tag">배포 승인 요청·결과</span>
+      <span class="tag">보안 검토 요청·결과</span>
+      <span class="tag">프로필별 표시명</span>
+      <span class="tag">담당자 매핑 (users.yaml)</span>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="services">
+    <h2><span class="num">7</span> 지원 서비스 맵</h2>
+    <p>
+      <code>pipeline/</code> 아래에 조직(Git org)별로 Jenkinsfile과 appspec/scripts를 두어,
+      라이브러리와 서비스 배포 정의를 한 저장소에서 관리합니다.
+    </p>
+
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+  Lib((doobeom-lib))
+
+  Lib --> Market["doobeommarket"]
+  Lib --> Data["doobeom-data"]
+  Lib --> Corp["doobeom-corp"]
+  Lib --> Sys["doobeom-sys"]
+  Lib --> Smmt["doobeom-smmt"]
+  Lib --> Lam["lambda"]
+  Lib --> Util["util"]
+
+  Market --> M1[market-web / market-ui]
+  Market --> M2[supp-web / ccmc / library-api]
+  Market --> M3[batch]
+
+  Data --> Da1[etl-flow]
+  Data --> Da2[search]
+  Data --> Da3[recommender]
+
+  Corp --> C1[intranet-web]
+  Corp --> C2[official-web]
+
+  Sys --> S1[barcode-lambda]
+  Sys --> S2[mediaconvert-lambda]
+  Sys --> S3[presignup-lambda]
+
+  Lam --> L1[event detection]
+  Util --> U1[backup / approve / jenkins-lib]
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 12. 조직·서비스 커버리지</p>
+
+    <table>
+      <thead>
+        <tr><th>조직</th><th>대표 서비스</th><th>배포 방식</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>doobeommarket</td><td>커머스 웹·API·배치</td><td>CodeDeploy + S3 (PHP/Node 등)</td></tr>
+        <tr><td>doobeom-data</td><td>ETL, 검색, 추천</td><td>CodeDeploy / 컨테이너</td></tr>
+        <tr><td>doobeom-corp</td><td>인트라넷·공식 웹</td><td>CodeDeploy</td></tr>
+        <tr><td>doobeom-sys / lambda</td><td>미디어·바코드·이벤트 Lambda</td><td>Lambda 코드/Layer 갱신</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 8 -->
+  <section id="tech">
+    <h2><span class="num">8</span> 기술 스택</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  subgraph CI["CI Orchestration"]
+    J[Jenkins]
+    GPL[Global Pipeline Library]
+    JUnit[Jenkins Pipeline Unit]
+  end
+
+  subgraph Lang["Language & Build"]
+    Groovy[Groovy]
+    Gradle[Gradle]
+    Docker[Docker Builders]
+  end
+
+  subgraph Cloud["AWS"]
+    S3c[S3]
+    CDc[CodeDeploy]
+    LMc[Lambda]
+    SSMc[SSM / Secrets]
+    ECRc[ECR]
+    CW[CloudWatch]
+    SF[Step Functions]
+    BT[Batch]
+  end
+
+  subgraph Collab["Collaboration"]
+    GH[GitHub]
+    SL[Slack]
+  end
+
+  J --- Groovy
+  GPL --- Groovy
+  Groovy --- Gradle
+  Groovy --- Cloud
+  J --- Collab
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 13. 기술 스택 구성</p>
+
+    <div class="tag-row">
+      <span class="tag">Groovy</span>
+      <span class="tag">Jenkins Shared Library</span>
+      <span class="tag">Gradle</span>
+      <span class="tag">JUnit</span>
+      <span class="tag">Jenkins Pipeline Unit</span>
+      <span class="tag">AWS CLI</span>
+      <span class="tag">CodeDeploy</span>
+      <span class="tag">Lambda Layers</span>
+      <span class="tag">Docker</span>
+      <span class="tag">Slack Webhook</span>
+      <span class="tag">SnakeYAML</span>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section id="usage">
+    <h2><span class="num">9</span> 사용 예시</h2>
+    <p>최소 패턴은 아래와 같습니다. 실제 서비스는 Closure 안에서 승인·치환·배포를 채웁니다.</p>
+<pre>
+@Library('doobeom-lib@master') _
+
+pipeline {
+    agent any
+    parameters {
+        booleanParam(name: 'ACTUAL_DISTRIBUTION', defaultValue: true)
+    }
+    stages {
+        stage('초기 세팅') {
+            steps {
+                script {
+                    initialize([
+                        organization: "doobeommarket",
+                        repositoryName: "db-market-web",
+                        profile: "prod",
+                        branch: "master",
+                        parameterStoreName: "/doobeom/db-market-web/env/prod",
+                    ])
+                }
+            }
+        }
+        stage('배포') {
+            steps {
+                script {
+                    buildPipeline(buildConfig(
+                        language: "php",
+                        gitUrl: "git@github.com:${env.ORGANIZATION}/${env.REPOSITORY_NAME}.git",
+                        prepare: { approve.withDeploy() },
+                        build:   { sh "composer install" },
+                        archive: { sh "zip -r ${env.FILENAME} ." },
+                        upload:  { /* s3.cp ... */ },
+                        deploy:  { /* deploy.deployAndWait ... */ },
+                        completion: { /* git tag */ }
+                    ))
+                }
+            }
+        }
+    }
+    post {
+        success { /* slack success */ }
+        failure { /* slack failure */ }
+        always  { commonPostAlways() }
+    }
+}
+</pre>
+
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  A["① @Library 로드"] --> B["② initialize<br/>환경/SSM"]
+  B --> C["③ buildConfig<br/>DSL 작성"]
+  C --> D["④ buildPipeline<br/>실행"]
+  D --> E["⑤ post<br/>Slack 결과"]
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 14. Jenkinsfile 작성 5단계 체크리스트</p>
+  </section>
+
+  <!-- 10 -->
+  <section id="testing">
+    <h2><span class="num">10</span> 테스트 &amp; 품질</h2>
+    <ul>
+      <li><strong>단위 테스트</strong> — Gradle + JUnit + Jenkins Pipeline Unit으로 vars·패키지 로직 모킹 테스트</li>
+      <li><strong>로컬 검증</strong> — <code>./gradlew build</code> / <code>./gradlew test</code></li>
+      <li><strong>Slack 샌드박스</strong> — <code>./gradlew sendSlackTest -Pchannel=...</code> 로 실제 발송 검증</li>
+      <li><strong>보안</strong> — AWS 키·웹훅을 코드에 하드코딩하지 않고 Jenkins Credential / SSM / Secrets Manager 사용</li>
+    </ul>
+
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  Dev[개발자] --> PR[Feature Branch]
+  PR --> Test["gradlew test"]
+  Test --> LibBranch["@Library(...@feature/xxx)"]
+  LibBranch --> Stg[Staging Job 검증]
+  Stg --> Merge[master 반영]
+  Merge --> Prod[운영 Job]
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 15. 라이브러리 변경 검증 흐름</p>
+  </section>
+
+  <!-- 11 -->
+  <section id="contribution">
+    <h2><span class="num">11</span> 기여 &amp; 역할</h2>
+    <div class="card-grid">
+      <div class="card">
+        <h3 style="margin-top:0">설계</h3>
+        <p>vars / src 분리, BuildWorkflow 단계 모델, AWS Command 패턴 정립</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">구현</h3>
+        <p>공유 스텝, 배포·승인·Slack, Lambda Layer 배포, 다수 서비스 Jenkinsfile</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">운영</h3>
+        <p>프로파일별 Parameter Store, Dry-run, 승인 게이트로 운영 안정성 확보</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">문서화</h3>
+        <p>신입 온보딩용 README / buildPipeline 가이드로 지식 전파</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      이 문서는 포트폴리오용으로 <strong>실제 회사명(쿠캣)을 두범(doobeom)</strong>으로 가명 처리했습니다.
+      패키지명·라이브러리명·조직명도 이에 맞춰 표기했습니다.
+    </div>
+  </section>
+
+  <!-- 12 -->
+  <section id="summary">
+    <h2><span class="num">12</span> 요약</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+  Goal["목표: 전사 CI/CD 표준화"]
+  Goal --> R1["재사용 가능한 Shared Library"]
+  Goal --> R2["안전한 승인·배포 게이트"]
+  Goal --> R3["AWS/Slack 추상화"]
+  Goal --> R4["다수 서비스 단일 DSL"]
+
+  R1 --> Out["산출물: doobeom-lib"]
+  R2 --> Out
+  R3 --> Out
+  R4 --> Out
+
+  Out --> Benefit["배포 시간↓ · 실수↓ · 온보딩↑"]
+      </pre>
+    </div>
+    <p class="diagram-caption">그림 16. 프로젝트 한 줄 요약</p>
+
+    <p>
+      <strong>두범 Jenkins Pipeline 공유 라이브러리</strong>는 Groovy Shared Library로
+      빌드·아카이브·업로드·배포·승인·알림을 표준화한 사내 CI/CD 플랫폼입니다.
+      서비스는 DSL만 채우면 되고, 인프라·협업 연동은 라이브러리가 담당합니다.
+    </p>
+  </section>
+
+  <footer>
+    doobeom Jenkins Pipeline Shared Library — Portfolio Document<br/>
+    Company alias: 두범 (doobeom) · Generated for portfolio presentation
+  </footer>
+    </div>
+  </div>
+
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+  // Active TOC highlight
+  const links = [...document.querySelectorAll("#toc-nav a")];
+  const sections = links
+    .map(a => document.querySelector(a.getAttribute("href")))
+    .filter(Boolean);
+
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const id = "#" + entry.target.id;
+      links.forEach(a => a.classList.toggle("active", a.getAttribute("href") === id));
+    });
+  }, { rootMargin: "-20% 0px -70% 0px", threshold: 0 });
+
+  sections.forEach(s => obs.observe(s));
+</script>
+
+
+    <script src="../assets/js/toc.js" defer></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/nav.js" defer></script>
+</body>
+</html>

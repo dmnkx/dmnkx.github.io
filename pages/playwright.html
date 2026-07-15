@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Playwright E2E QA — doobeom Portfolio</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/theme.css" />
+  <link rel="stylesheet" href="../assets/css/nav.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="toc" aria-label="목차">
+      <p class="toc-label">Contents</p>
+      <nav>
+        <a href="#overview"><span class="num">01</span>Overview</a>
+        <a href="#goals"><span class="num">02</span>테스트 목표</a>
+        <a href="#stack"><span class="num">03</span>기술 스택</a>
+        <a href="#architecture"><span class="num">04</span>아키텍처</a>
+        <a href="#structure"><span class="num">05</span>프로젝트 구조</a>
+        <a href="#config"><span class="num">06</span>설정 상세</a>
+        <a href="#test-new"><span class="num">07</span>신상품 카운트</a>
+        <a href="#test-order"><span class="num">08</span>로그인·주문·결제</a>
+        <a href="#iframe"><span class="num">09</span>iframe 제어</a>
+        <a href="#popup"><span class="num">10</span>팝업 제거</a>
+        <a href="#env"><span class="num">11</span>환경 변수</a>
+        <a href="#lifecycle"><span class="num">12</span>생명주기</a>
+        <a href="#run"><span class="num">13</span>실행 가이드</a>
+        <a href="#decisions"><span class="num">14</span>설계 결정</a>
+      </nav>
+    </aside>
+
+    <div class="wrap">
+      <details class="toc-mobile">
+        <summary>목차</summary>
+        <nav>
+          <a href="#overview">01 · Overview</a>
+          <a href="#goals">02 · 테스트 목표</a>
+          <a href="#stack">03 · 기술 스택</a>
+          <a href="#architecture">04 · 아키텍처</a>
+          <a href="#structure">05 · 프로젝트 구조</a>
+          <a href="#config">06 · 설정 상세</a>
+          <a href="#test-new">07 · 신상품 카운트</a>
+          <a href="#test-order">08 · 로그인·주문·결제</a>
+          <a href="#iframe">09 · iframe 제어</a>
+          <a href="#popup">10 · 팝업 제거</a>
+          <a href="#env">11 · 환경 변수</a>
+          <a href="#lifecycle">12 · 생명주기</a>
+          <a href="#run">13 · 실행 가이드</a>
+          <a href="#decisions">14 · 설계 결정</a>
+        </nav>
+      </details>
+
+      <div class="hero">
+        <div class="hero-badge">E2E Automation · Playwright 1.49</div>
+        <h2>두범마켓 이커머스<br />엔드투엔드 자동화 테스트</h2>
+        <p>
+          Microsoft Playwright로 실제 사용자 여정(신상품 확인 → 로그인 → 장바구니 → 주문 → 결제 수단 선택)을
+          브라우저에서 재현·검증하는 E2E 테스트 스위트입니다. Chromium/WebKit 크로스 브라우저와
+          iframe·동적 팝업 등 이커머스 UI 과제를 다룹니다.
+        </p>
+        <div class="meta-row">
+          <span class="chip"><strong>회사</strong> 두범 (doobeom)</span>
+          <span class="chip"><strong>대상</strong> doobeommarket.com</span>
+          <span class="chip"><strong>프레임워크</strong> @playwright/test</span>
+          <span class="chip"><strong>브라우저</strong> Chrome · Safari(WebKit)</span>
+        </div>
+      </div>
+
+      <div class="callout">
+        본 문서는 포트폴리오용입니다. 회사명·도메인 등 식별 정보는 <strong>두범(doobeom)</strong>으로 가명 처리되었습니다.
+      </div>
+
+      <section id="overview">
+        <h3>1. Overview</h3>
+        <div class="card-grid">
+          <div class="card"><strong>유형</strong><span>E2E QA Automation</span></div>
+          <div class="card"><strong>런타임</strong><span>Node.js</span></div>
+          <div class="card"><strong>리포트</strong><span>HTML + Failure Video</span></div>
+          <div class="card"><strong>보안</strong><span>dotenv 자격증명</span></div>
+        </div>
+      </section>
+
+      <section id="goals">
+        <h3>2. 테스트 목표</h3>
+        <p>
+          수동 회귀로 반복하기 비용이 큰 <strong>핵심 커머스 플로우</strong>를 자동화해,
+          UI/필터/결제 위젯 변경 시 조기 결함을 검출합니다.
+        </p>
+        <div class="diagram">
+          <div class="diagram-label">배포 파이프라인에서의 역할</div>
+          <pre class="mermaid">
+flowchart LR
+  A[배포 / UI 변경] --> B[Playwright 스위트]
+  B --> C{결과}
+  C -->|Pass| D[리그레션 안전]
+  C -->|Fail| E[스크린샷 · 비디오 · HTML Report]
+  E --> F[원인 분석 · 수정]
+          </pre>
+        </div>
+        <div class="card-grid">
+          <div class="card"><strong>카탈로그 검증</strong><span>신상품 로드 · 품절 오버레이 · 두범배송 필터 재집계</span></div>
+          <div class="card"><strong>주문 플로우</strong><span>로그인 → 장바구니 → 배송 타입 → 결제 iframe</span></div>
+          <div class="card"><strong>UI 장애물 제거</strong><span>시스템 팝업·바텀시트·툴팁 DOM 제거</span></div>
+          <div class="card"><strong>크로스 브라우저</strong><span>Chrome 채널 + Safari(WebKit) 프로젝트</span></div>
+        </div>
+      </section>
+
+      <section id="stack">
+        <h3>3. 기술 스택</h3>
+        <p>
+          Playwright는 CDP 및 자체 프로토콜로 브라우저를 제어합니다.
+          Selenium식 WebDriver 대비 <strong>빠른 실행·강력한 셀렉터·내장 Auto-wait</strong>가 특징입니다.
+        </p>
+        <table>
+          <tr><th>패키지</th><th>버전</th><th>역할</th></tr>
+          <tr><td><code>@playwright/test</code></td><td>^1.49.0</td><td>러너, fixture, expect, 프로젝트 설정</td></tr>
+          <tr><td><code>playwright</code></td><td>^1.49.0</td><td>브라우저 자동화 코어</td></tr>
+          <tr><td><code>dotenv</code></td><td>^16.4.7</td><td>.env에서 USER_ID / USER_PASSWORD 로드</td></tr>
+        </table>
+        <div class="diagram">
+          <div class="diagram-label">기술 계층</div>
+          <pre class="mermaid">
+flowchart TB
+  L1["Test Specs · Assertion · dotenv"]
+  L2["playwright/test Runner · Fixture · HTML Reporter"]
+  L3["Playwright Core · Locator · Frame · evaluate"]
+  L4["Browser · Chromium/Chrome · WebKit"]
+  L5["Target · doobeommarket.com · 결제 iframe"]
+  L1 --> L2 --> L3 --> L4 --> L5
+          </pre>
+        </div>
+      </section>
+
+      <section id="architecture">
+        <h3>4. 시스템 아키텍처</h3>
+        <p>
+          Test Runner가 Worker에 테스트를 분배하고, 각 Worker는 Browser → Context → Page 순으로
+          격리 환경을 만듭니다. 실패 시 비디오·스크린샷이 HTML 리포트에 첨부됩니다.
+        </p>
+        <div class="diagram">
+          <div class="diagram-label">Runner · Worker · Target</div>
+          <pre class="mermaid">
+flowchart TB
+  subgraph Runner["Playwright Test Runner"]
+    CFG[playwright.config.js]
+    DISP[Dispatcher]
+    REP[HTML Reporter]
+  end
+  subgraph W1["Worker · Chrome"]
+    BC[Browser · Chromium]
+    CC[BrowserContext]
+    PC[Page]
+  end
+  subgraph W2["Worker · Safari"]
+    BW[Browser · WebKit]
+    CW[BrowserContext]
+    PW[Page]
+  end
+  subgraph App["Target"]
+    SITE[doobeommarket.com]
+    PAY[결제 iframe]
+  end
+  CFG --> DISP
+  DISP --> W1
+  DISP --> W2
+  PC --> SITE
+  PW --> SITE
+  PC --> PAY
+  W1 --> REP
+  W2 --> REP
+          </pre>
+        </div>
+
+        <h4>4.1 Browser / Context / Page</h4>
+        <p>
+          <strong>BrowserContext</strong>는 쿠키·스토리지·권한이 격리된 “시크릿 창”에 가깝고,
+          테스트마다 깨끗한 상태로 시작할 수 있습니다.
+          시그니처의 <code>({ page })</code>는 fixture로, Runner가 Context/Page를 주입합니다.
+        </p>
+        <div class="diagram">
+          <div class="diagram-label">계층 관계</div>
+          <pre class="mermaid">
+flowchart LR
+  B[Browser] --> C1[Context A]
+  B --> C2[Context B]
+  C1 --> P1[Page]
+  C1 --> P2[Page]
+  C2 --> P3[Page]
+          </pre>
+        </div>
+
+        <h4>4.2 Auto-wait</h4>
+        <p>
+          Locator 액션(<code>click</code>, <code>fill</code>)은 요소가
+          <em>attached → visible → stable → enabled → receives events</em>가 될 때까지 대기합니다.
+          신상품 테스트에서는 <code>waitForSelector(..., { state: 'attached' })</code>로 리스트 마운트를 보완합니다.
+        </p>
+        <div class="diagram">
+          <div class="diagram-label">Auto-wait 상태 전이</div>
+          <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Attached: DOM에 존재
+  Attached --> Visible: display/opacity OK
+  Visible --> Stable: 애니메이션 안정화
+  Stable --> Enabled: disabled 아님
+  Enabled --> Actionable: 포인터 이벤트 수신
+  Actionable --> [*]: click / fill
+          </pre>
+        </div>
+      </section>
+
+      <section id="structure">
+        <h3>5. 프로젝트 구조</h3>
+        <pre>playwright/
+├── playwright.config.js
+├── package.json
+├── tests/
+│   ├── countNewProducts.spec.js
+│   └── loginAndOrderPayMethod.test.js
+├── util/
+│   └── deleteSystemPopup.js
+└── test-results/          # HTML Report</pre>
+        <div class="diagram">
+          <div class="diagram-label">모듈 의존성</div>
+          <pre class="mermaid">
+flowchart TB
+  SPEC[tests/*.spec.js]
+  UTIL[util/deleteSystemPopup.js]
+  CFG[playwright.config.js]
+  ENV[.env · dotenv]
+  SPEC -->|import| UTIL
+  SPEC -->|fixture| CFG
+  SPEC -->|credentials| ENV
+  CFG --> RUN[(npx playwright test)]
+  RUN --> OUT[test-results/]
+          </pre>
+        </div>
+      </section>
+
+      <section id="config">
+        <h3>6. 설정 상세</h3>
+        <p>
+          공통 <code>use</code> 옵션과 프로젝트별 브라우저 프로필로 나뉩니다.
+          <code>baseURL</code>을 두면 <code>page.goto('/main/new')</code>처럼 상대 경로로 이동합니다.
+        </p>
+<pre><code>module.exports = {
+  projects: [ /* chrome, safari */ ],
+  timeout: 30000,
+  expect: { timeout: 5000 },
+  reporter: [['html', { outputFolder: 'test-results', open: 'never' }]],
+  use: {
+    baseURL: 'https://doobeommarket.com/',
+    viewport: { width: 1280, height: 720 },
+    ignoreHTTPSErrors: true,
+    video: 'retain-on-failure',
+    actionTimeout: 10000,
+  },
+};</code></pre>
+
+        <h4>6.1 멀티 프로젝트</h4>
+        <div class="card-grid">
+          <div class="card"><strong>chrome</strong><span>chromium + channel:chrome · headless:false</span></div>
+          <div class="card"><strong>safari</strong><span>webkit · headless:true (CI 친화)</span></div>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">동일 스펙 × 두 엔진</div>
+          <pre class="mermaid">
+flowchart LR
+  S[동일 테스트 스펙] --> P1[project: chrome]
+  S --> P2[project: safari]
+  P1 --> R1[결과 A]
+  P2 --> R2[결과 B]
+  R1 --> H[HTML Report]
+  R2 --> H
+          </pre>
+        </div>
+
+        <h4>6.2 타임아웃 계층</h4>
+        <table>
+          <tr><th>옵션</th><th>값</th><th>의미</th></tr>
+          <tr><td><code>timeout</code></td><td>30,000ms</td><td>테스트 전체 한도</td></tr>
+          <tr><td><code>actionTimeout</code></td><td>10,000ms</td><td>단일 액션 대기</td></tr>
+          <tr><td><code>expect.timeout</code></td><td>5,000ms</td><td>assertion 폴링</td></tr>
+          <tr><td><code>video</code></td><td>retain-on-failure</td><td>실패 케이스만 영상 보존</td></tr>
+        </table>
+      </section>
+
+      <section id="test-new">
+        <h3>7. 신상품 갯수 체크</h3>
+        <p>
+          파일: <code>tests/countNewProducts.spec.js</code> —
+          신상품 카드를 순회하며 전체·품절 수량을 집계하고, 두범배송 필터 후 동일 로직으로 재검증합니다.
+        </p>
+        <div class="diagram">
+          <div class="diagram-label">집계 알고리즘</div>
+          <pre class="mermaid">
+flowchart TD
+  A[goto /main/new] --> B[waitForSelector product items]
+  B --> C[Locator.count → N]
+  C --> D{i &lt; N}
+  D -->|yes| E[nth i]
+  E --> F{.sold-out-cover visible?}
+  F -->|yes| G[soldOutCount++]
+  F -->|no| H[건너뜀]
+  G --> D
+  H --> D
+  D -->|no| I[console.log 전체/품절]
+  I --> J[두범배송 필터 클릭]
+  J --> B2[getNewProductCount 재호출]
+          </pre>
+        </div>
+        <ul>
+          <li><strong>Locator 재사용</strong> — 필터 클릭 후에도 같은 셀렉터로 최신 DOM을 읽습니다.</li>
+          <li><strong>nth(i) 순회</strong> — 카드별 품절 오버레이를 인덱스 단위로 검사합니다.</li>
+          <li><strong>내부 헬퍼</strong> — <code>getNewProductCount</code>로 필터 전후 DRY 재사용.</li>
+        </ul>
+<pre><code>const isSoldOut = await product
+  .locator('.sold-out-cover')
+  .isVisible();
+// 필터: label[for="doobeom_delivery_check"]</code></pre>
+      </section>
+
+      <section id="test-order">
+        <h3>8. 로그인 · 주문 · 결제</h3>
+        <p>
+          파일: <code>tests/loginAndOrderPayMethod.test.js</code> —
+          인증 Happy Path를 끝까지 밟아 주문 페이지와 결제 위젯 도달을 검증합니다.
+        </p>
+        <div class="diagram">
+          <div class="diagram-label">시퀀스</div>
+          <pre class="mermaid">
+sequenceDiagram
+  participant T as Test
+  participant P as Page
+  participant S as doobeommarket.com
+  participant I as 결제 iframe
+
+  T->>P: goto /ko/login
+  T->>P: fill user_id / user_password
+  T->>P: click submit
+  P->>S: POST 로그인
+  S-->>P: redirect /ko/main
+  T->>P: goto /ko/cart
+  T->>T: expect(productCount).toBeGreaterThan(0)
+  T->>P: deleteSystemPopup()
+  T->>P: 일반배송 선택 → 주문하기
+  P->>S: navigate /ko/order
+  T->>P: deleteSystemPopup()
+  T->>I: contentFrame()
+  T->>I: 일반결제 → 가상계좌 클릭
+          </pre>
+        </div>
+        <ul>
+          <li><strong>인증</strong> — <code>waitForURL('/ko/main')</code>으로 리다이렉트 결과를 동기화</li>
+          <li><strong>장바구니 가드</strong> — 빈 카트면 Fail-fast</li>
+          <li><strong>텍스트 Locator</strong> — <code>label.filter({ hasText: '일반배송' })</code></li>
+        </ul>
+        <div class="callout">
+          사전 조건: 계정 장바구니에 상품이 이미 담겨 있다고 가정합니다.
+        </div>
+      </section>
+
+      <section id="iframe">
+        <h3>9. iframe 제어 — 결제 위젯</h3>
+        <p>
+          결제 UI는 별도 origin iframe에 렌더됩니다.
+          Frame 객체를 얻은 뒤 그 위에서 Locator를 사용합니다.
+        </p>
+        <div class="diagram">
+          <div class="diagram-label">부모 Document ↔ 결제 iframe</div>
+          <pre class="mermaid">
+flowchart TB
+  subgraph Parent["Parent · /ko/order"]
+    PM["#payment-method"]
+    IF["iframe"]
+  end
+  subgraph Frame["iframe ContentDocument"]
+    L1["label: 일반결제"]
+    B1["button: 가상계좌"]
+  end
+  PM --> IF
+  IF -.->|contentFrame| Frame
+  L1 --> B1
+          </pre>
+        </div>
+<pre><code>await page.waitForSelector('#payment-method');
+const iframe = await page.locator('#payment-method iframe').contentFrame();
+await iframe.locator('label').filter({ hasText: '일반결제' }).click();
+await iframe.locator('button').filter({ hasText: '가상계좌' }).click();</code></pre>
+      </section>
+
+      <section id="popup">
+        <h3>10. 시스템 팝업 제거</h3>
+        <p>
+          파일: <code>util/deleteSystemPopup.js</code> —
+          마케팅·공지 UI가 클릭을 가로채면 타임아웃이 납니다.
+          <code>page.evaluate</code>로 DOM을 직접 제거합니다.
+        </p>
+        <table>
+          <tr><th>셀렉터</th><th>역할</th></tr>
+          <tr><td><code>.cc-systempop-wrap</code></td><td>시스템/프로모션 팝업</td></tr>
+          <tr><td><code>.bottom-sheet</code></td><td>하단 시트</td></tr>
+          <tr><td><code>.cc-tooltip-message</code></td><td>툴팁 레이어</td></tr>
+        </table>
+        <div class="diagram">
+          <div class="diagram-label">제거 흐름</div>
+          <pre class="mermaid">
+flowchart LR
+  A[테스트 스텝] --> B[deleteSystemPopup]
+  B --> C[page.evaluate]
+  C --> D[querySelectorAll]
+  D --> E[element.remove]
+  E --> F[다음 UI 액션]
+          </pre>
+        </div>
+      </section>
+
+      <section id="env">
+        <h3>11. 환경 변수 · 자격증명</h3>
+        <p>
+          <code>USER_ID</code>, <code>USER_PASSWORD</code>를 <code>.env</code>에서 읽습니다.
+          리포지토리에 비밀을 커밋하지 않습니다.
+        </p>
+<pre><code>require('dotenv').config();
+const user = {
+  id: process.env.USER_ID,
+  password: process.env.USER_PASSWORD,
+};</code></pre>
+        <div class="callout">
+          <code>.env</code>는 <code>.gitignore</code>에 포함하고, HTML 리포트·트레이스에 비밀번호가 남지 않도록 합니다.
+        </div>
+      </section>
+
+      <section id="lifecycle">
+        <h3>12. 테스트 생명주기</h3>
+        <div class="diagram">
+          <div class="diagram-label">실행 · 산출물</div>
+          <pre class="mermaid">
+stateDiagram-v2
+  [*] --> LoadConfig
+  LoadConfig --> CollectTests
+  CollectTests --> LaunchBrowser
+  LaunchBrowser --> RunTest
+  RunTest --> Pass: assertions OK
+  RunTest --> Fail: timeout / expect
+  Pass --> Report
+  Fail --> Artifacts: video · screenshot
+  Artifacts --> Report
+  Report --> [*]: test-results/
+          </pre>
+        </div>
+        <ul>
+          <li><strong>Reporter</strong>: HTML → <code>test-results/</code></li>
+          <li><strong>열람</strong>: <code>npx playwright show-report</code></li>
+        </ul>
+      </section>
+
+      <section id="run">
+        <h3>13. 실행 가이드</h3>
+<pre><code>npm install
+npx playwright install
+
+# .env
+USER_ID=your_username
+USER_PASSWORD=your_password
+
+npx playwright test
+npx playwright test --project=chrome
+npx playwright test --project=safari
+npx playwright show-report</code></pre>
+      </section>
+
+      <section id="decisions">
+        <h3>14. 설계 결정 · 학습 포인트</h3>
+        <div class="card-grid">
+          <div class="card"><strong>baseURL + 상대 경로</strong><span>스테이징 전환 시 config 한 줄</span></div>
+          <div class="card"><strong>유틸 분리</strong><span>팝업 제거를 스펙에서 분리·재사용</span></div>
+          <div class="card"><strong>텍스트 Locator</strong><span>배송/결제 UI 의도 표현</span></div>
+          <div class="card"><strong>실패 시만 비디오</strong><span>디스크 절약 + 디버깅 단서</span></div>
+        </div>
+        <div class="callout">
+          iframe·팝업·멀티 브라우저·시크릿 관리를 Playwright 네이티브 기능으로 다루는 샘플입니다.
+        </div>
+      </section>
+
+      <footer>doobeom Portfolio · portfolio-playwright · doobeom Infra</footer>
+    </div>
+  </div>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+  <script src="../assets/js/toc.js" defer></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/nav.js" defer></script>
+</body>
+</html>

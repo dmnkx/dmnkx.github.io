@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>앱 리뷰 스크래퍼 — doobeom Portfolio</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/theme.css" />
+  <link rel="stylesheet" href="../assets/css/nav.css" />
+</head>
+<body>
+    <div class="layout">
+    <aside class="toc" aria-label="목차">
+      <p class="toc-label">Contents</p>
+      <nav>
+        <a href="#overview"><span class="num">01</span>Overview</a>
+        <a href="#targets"><span class="num">02</span>대상 앱</a>
+        <a href="#pipeline"><span class="num">03</span>파이프라인</a>
+        <a href="#stack"><span class="num">04</span>Tech Stack</a>
+        <a href="#arch"><span class="num">05</span>아키텍처</a>
+        <a href="#collector"><span class="num">06</span>Collector</a>
+        <a href="#nlp"><span class="num">07</span>감정 분석</a>
+        <a href="#sender"><span class="num">08</span>Sender / Slack</a>
+        <a href="#cicd"><span class="num">09</span>GitHub Actions</a>
+        <a href="#cli"><span class="num">10</span>CLI</a>
+        <a href="#structure"><span class="num">11</span>디렉터리</a>
+        <a href="#highlights"><span class="num">12</span>하이라이트</a>
+      </nav>
+    </aside>
+
+    <div class="wrap">
+    <details class="toc-mobile">
+      <summary>목차</summary>
+      <nav>
+        <a href="#overview">01 · Overview</a>
+        <a href="#targets">02 · 대상 앱</a>
+        <a href="#pipeline">03 · 파이프라인</a>
+        <a href="#stack">04 · Tech Stack</a>
+        <a href="#arch">05 · 아키텍처</a>
+        <a href="#collector">06 · Collector</a>
+        <a href="#nlp">07 · 감정 분석</a>
+        <a href="#sender">08 · Sender / Slack</a>
+        <a href="#cicd">09 · GitHub Actions</a>
+        <a href="#cli">10 · CLI</a>
+        <a href="#structure">11 · 디렉터리</a>
+        <a href="#highlights">12 · 하이라이트</a>
+      </nav>
+    </details>
+
+<div class="hero">
+        <h2>스토어 리뷰 수집 · NLP · Slack 알림</h2>
+        <p>두범·두범비즈의 App Store / Google Play 리뷰를 자동 수집하고, 한국어 감정 분석 후 Google Sheets에 저장하며 Slack으로 운영팀에 전달하는 배치 파이프라인입니다.</p>
+        <div class="chips">
+          <span class="chip">Python 3.13+</span>
+          <span class="chip">uv</span>
+          <span class="chip">Transformers</span>
+          <span class="chip">Slack</span>
+          <span class="chip">cron Actions</span>
+        </div>
+      </div>
+
+      <section id="overview">
+        <h3>1. Overview</h3>
+        <div class="card-grid">
+          <div class="card"><strong>유형</strong><span>ETL 배치 / 운영 자동화</span></div>
+          <div class="card"><strong>입력</strong><span>App Store · Play Store</span></div>
+          <div class="card"><strong>저장</strong><span>Google Sheets</span></div>
+          <div class="card"><strong>출력</strong><span>Slack 리치 메시지</span></div>
+        </div>
+      </section>
+
+      <section id="targets">
+        <h3>2. 대상 앱</h3>
+        <table>
+          <tr><th>앱</th><th>iOS</th><th>Android</th></tr>
+          <tr><td>두범</td><td>1456133601</td><td><code>com.doobeom</code></td></tr>
+          <tr><td>두범비즈</td><td>6621208945</td><td><code>com.doobeom.biz</code></td></tr>
+        </table>
+        <div class="diagram">
+          <div class="diagram-label">모니터링 범위</div>
+          <pre class="mermaid">
+flowchart LR
+  subgraph iOS
+    I1[두범 App Store]
+    I2[비즈 App Store]
+  end
+  subgraph Android
+    A1[두범 Play]
+    A2[비즈 Play]
+  end
+  I1 & I2 & A1 & A2 --> SCR[review-scraper]
+          </pre>
+        </div>
+      </section>
+
+      <section id="pipeline">
+        <h3>3. 파이프라인 한눈에</h3>
+        <div class="diagram">
+          <div class="diagram-label">Collector → Store → Sender</div>
+          <pre class="mermaid">
+flowchart LR
+  ST[(App Store<br/>Play Store)] --> COL[collector.py]
+  COL --> NLP[emotion.py<br/>KOTE 모델]
+  NLP --> SH[(Google Sheets)]
+  SH --> SEN[sender.py]
+  SEN --> SL[Slack Channel]
+          </pre>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">엔드투엔드 시퀀스</div>
+          <pre class="mermaid">
+sequenceDiagram
+  participant CR as Cron
+  participant C as Collector
+  participant S as Sheets
+  participant N as NLP
+  participant SE as Sender
+  participant SL as Slack
+  CR->>C: */30 collect
+  C->>N: classify emotion
+  N-->>C: label + score
+  C->>S: append rows
+  CR->>SE: hourly send
+  SE->>S: unread rows
+  SE->>SL: rich message
+  SE->>S: mark 발송여부
+          </pre>
+        </div>
+      </section>
+
+      <section id="stack">
+        <h3>4. Tech Stack</h3>
+        <div class="diagram">
+          <div class="diagram-label">의존성 맵</div>
+          <pre class="mermaid">
+mindmap
+  root((scraper))
+    Collect
+      app-store-reviews-reader
+      google-play-scraper
+    Data
+      pandas
+      gspread
+      oauth2client
+    NLP
+      torch
+      transformers
+      KOTE model
+    Notify
+      slack-sdk
+    Tooling
+      uv
+      matplotlib
+          </pre>
+        </div>
+      </section>
+
+      <section id="arch">
+        <h3>5. 아키텍처</h3>
+        <div class="diagram">
+          <div class="diagram-label">모듈 책임</div>
+          <pre class="mermaid">
+flowchart TB
+  subgraph Entry
+    MAIN[main.py CLI]
+    COL[collector.py]
+    SEN[sender.py]
+    REM[remove.py]
+  end
+  subgraph Src
+    BASE[app_base.py]
+    ENV[environment.py]
+    GS[google_sheets.py]
+    EM[emotion.py]
+    SL[slack.py]
+    UT[utils.py]
+  end
+  MAIN --> BASE
+  COL --> BASE
+  COL --> GS
+  COL --> EM
+  SEN --> GS
+  SEN --> SL
+  BASE --> ENV
+  BASE --> UT
+          </pre>
+        </div>
+      </section>
+
+      <section id="collector">
+        <h3>6. Collector</h3>
+        <div class="diagram">
+          <div class="diagram-label">수집 플로우</div>
+          <pre class="mermaid">
+flowchart TD
+  START[시작] --> OPT[CLI 옵션<br/>appname / os / days]
+  OPT --> TZ[Asia/Seoul 날짜 필터]
+  TZ --> FETCH{OS?}
+  FETCH -->|iOS| IAS[app-store-reviews-reader]
+  FETCH -->|Android| GPS[google-play-scraper]
+  IAS --> NORM[정규화]
+  GPS --> NORM
+  NORM --> EM[감정 분석]
+  EM --> WRITE[Sheets append]
+          </pre>
+        </div>
+      </section>
+
+      <section id="nlp">
+        <h3>7. 감정 분석</h3>
+        <p>모델: <code>searle-j/kote_for_easygoing_people</code> (HuggingFace Transformers)</p>
+        <div class="diagram">
+          <div class="diagram-label">NLP 추론 경로</div>
+          <pre class="mermaid">
+flowchart LR
+  T[리뷰 텍스트] --> TOK[Tokenizer]
+  TOK --> MOD[KOTE Classifier]
+  MOD --> L[Emotion Label]
+  MOD --> SC[Score]
+  L --> ROW[Sheets Row]
+  SC --> ROW
+          </pre>
+        </div>
+      </section>
+
+      <section id="sender">
+        <h3>8. Sender / Slack</h3>
+        <div class="diagram">
+          <div class="diagram-label">미발송 리뷰 알림</div>
+          <pre class="mermaid">
+flowchart LR
+  SH[(Sheets<br/>발송여부=N)] --> SE[sender.py]
+  SE --> MSG[리치 메시지<br/>별점 · 링크 · 아이콘]
+  MSG --> SL[Slack]
+  SL --> UPD[발송여부=Y]
+          </pre>
+        </div>
+      </section>
+
+      <section id="cicd">
+        <h3>9. GitHub Actions</h3>
+        <div class="diagram">
+          <div class="diagram-label">크론 스케줄 (UTC, TZ Asia/Seoul)</div>
+          <pre class="mermaid">
+gantt
+  title 하루 운영 리듬 (개념)
+  dateFormat HH:mm
+  axisFormat %H:%M
+  section Collector
+  30분 주기 수집           :active, c1, 00:00, 24h
+  section Sender
+  매시 정각 발송           :active, s1, 00:00, 24h
+          </pre>
+        </div>
+        <table>
+          <tr><th>워크플로</th><th>스케줄</th><th>역할</th></tr>
+          <tr><td><code>collector.yaml</code></td><td><code>*/30</code></td><td>수집 · 감정분석 · Sheets</td></tr>
+          <tr><td><code>sender.yaml</code></td><td><code>0 * * * *</code></td><td>미발송분 Slack 전송</td></tr>
+        </table>
+        <p class="muted">재현 가능 빌드: <code>uv sync --locked</code></p>
+      </section>
+
+      <section id="cli">
+        <h3>10. CLI</h3>
+        <div class="diagram">
+          <div class="diagram-label">실행 모드</div>
+          <pre class="mermaid">
+flowchart TB
+  CLI[CLI] --> M1[main.py<br/>직접 Slack 발송형]
+  CLI --> M2[collector.py<br/>수집 전용]
+  CLI --> M3[sender.py<br/>발송 전용]
+  M1 --> OPT[--appname --os --days<br/>날짜 범위]
+  M2 --> OPT
+          </pre>
+        </div>
+      </section>
+
+      <section id="structure">
+        <h3>11. 디렉터리 구조</h3>
+        <div class="diagram">
+          <div class="diagram-label">소스 트리</div>
+          <pre class="mermaid">
+flowchart TD
+  R[doobeom-app-review-scraper]
+  R --> MAIN[main.py]
+  R --> COL[collector.py]
+  R --> SEN[sender.py]
+  R --> REM[remove.py]
+  R --> SRC[src/]
+  R --> GH[.github/workflows/]
+  R --> PY[pyproject.toml · uv.lock]
+  SRC --> AB[app_base · environment]
+  SRC --> IO[google_sheets · slack · emotion · utils]
+          </pre>
+        </div>
+      </section>
+
+      <section id="highlights">
+        <h3>12. 기술 하이라이트</h3>
+        <div class="card-grid">
+          <div class="card"><strong>ETL 분리</strong><span>Collector / Sender 독립 스케줄</span></div>
+          <div class="card"><strong>한국어 NLP</strong><span>KOTE 감정 분류</span></div>
+          <div class="card"><strong>운영 UX</strong><span>Slack 별점·관리자 링크</span></div>
+          <div class="card"><strong>재현성</strong><span>uv lock + Actions</span></div>
+        </div>
+      </section>
+
+      <footer>doobeom Portfolio · portfolio-app-review-scraper · doobeom Mobile</footer>
+    </div>
+  </div>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    const links = document.querySelectorAll('aside nav a');
+    const secs = [...links].map(a => document.querySelector(a.getAttribute('href')));
+    const onScroll = () => {
+      let cur = secs[0];
+      for (const s of secs) if (s && s.getBoundingClientRect().top <= 120) cur = s;
+      links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + (cur && cur.id)));
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  </script>
+    <script src="../assets/js/toc.js" defer></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/nav.js" defer></script>
+</body>
+</html>

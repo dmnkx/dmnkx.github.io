@@ -1,0 +1,116 @@
+/* Shared portfolio shell — top tabs + layout offset */
+:root {
+  --pf-nav-h: 52px;
+  --pf-nav-bg: #0a0e14;
+  --pf-nav-border: #1e2a3a;
+  --pf-nav-text: #9aabc0;
+  --pf-nav-text-active: #f0f4f8;
+  --pf-nav-accent: #3d8bfd;
+  --pf-nav-font: "IBM Plex Sans KR", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+}
+
+.pf-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--pf-nav-h);
+  z-index: 10000;
+  display: flex;
+  align-items: stretch;
+  background: var(--pf-nav-bg);
+  border-bottom: 1px solid var(--pf-nav-border);
+  font-family: var(--pf-nav-font);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.pf-nav__brand {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 1.1rem;
+  border-right: 1px solid var(--pf-nav-border);
+  text-decoration: none;
+  color: var(--pf-nav-text-active);
+  font-weight: 600;
+  font-size: 0.88rem;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.pf-nav__brand span {
+  color: var(--pf-nav-accent);
+  font-weight: 700;
+}
+
+.pf-nav__tabs {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pf-nav-border) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pf-nav__tabs::-webkit-scrollbar {
+  height: 3px;
+}
+
+.pf-nav__tabs a {
+  display: flex;
+  align-items: center;
+  padding: 0 0.95rem;
+  color: var(--pf-nav-text);
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.pf-nav__tabs a:hover {
+  color: var(--pf-nav-text-active);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pf-nav__tabs a.is-active {
+  color: var(--pf-nav-text-active);
+  border-bottom-color: var(--pf-nav-accent);
+  background: rgba(61, 139, 253, 0.08);
+}
+
+.pf-nav__group {
+  display: none;
+}
+
+/* Body offset when top nav is present */
+body.has-pf-nav {
+  padding-top: var(--pf-nav-h) !important;
+}
+
+body.has-pf-nav section,
+body.has-pf-nav [id] {
+  scroll-margin-top: calc(var(--pf-nav-h) + 16px);
+}
+
+/* Fixed / sticky sidebars clear the top nav */
+body.has-pf-nav aside.toc {
+  top: calc(var(--pf-nav-h) + 1rem) !important;
+  max-height: calc(100vh - var(--pf-nav-h) - 2rem) !important;
+  height: auto !important;
+}
+
+@media (max-width: 860px) {
+  .pf-nav__brand {
+    padding: 0 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .pf-nav__tabs a {
+    padding: 0 0.7rem;
+    font-size: 0.72rem;
+  }
+}

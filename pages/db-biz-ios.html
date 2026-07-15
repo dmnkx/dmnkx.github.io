@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>두범비즈 iOS — doobeom Portfolio</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/theme.css" />
+  <link rel="stylesheet" href="../assets/css/nav.css" />
+</head>
+<body>
+    <div class="layout">
+    <aside class="toc" aria-label="목차">
+      <p class="toc-label">Contents</p>
+      <nav>
+        <a href="#overview"><span class="num">01</span>Overview</a>
+        <a href="#parity"><span class="num">02</span>Android 대칭 구조</a>
+        <a href="#stack"><span class="num">03</span>Tech Stack</a>
+        <a href="#arch"><span class="num">04</span>아키텍처</a>
+        <a href="#flow"><span class="num">05</span>화면 / 권한 플로우</a>
+        <a href="#webview"><span class="num">06</span>WKWebView &amp; Bridge</a>
+        <a href="#nse"><span class="num">07</span>Notification Extension</a>
+        <a href="#structure"><span class="num">08</span>디렉터리 구조</a>
+        <a href="#security"><span class="num">09</span>탈옥 / 디버거 탐지</a>
+        <a href="#highlights"><span class="num">10</span>기술 하이라이트</a>
+      </nav>
+    </aside>
+
+    <div class="wrap">
+    <details class="toc-mobile">
+      <summary>목차</summary>
+      <nav>
+        <a href="#overview">01 · Overview</a>
+        <a href="#parity">02 · Android 대칭 구조</a>
+        <a href="#stack">03 · Tech Stack</a>
+        <a href="#arch">04 · 아키텍처</a>
+        <a href="#flow">05 · 화면 / 권한 플로우</a>
+        <a href="#webview">06 · WKWebView &amp; Bridge</a>
+        <a href="#nse">07 · Notification Extension</a>
+        <a href="#structure">08 · 디렉터리 구조</a>
+        <a href="#security">09 · 탈옥 / 디버거 탐지</a>
+        <a href="#highlights">10 · 기술 하이라이트</a>
+      </nav>
+    </details>
+
+<div class="hero">
+        <h2>두범비즈 — B2B Hybrid iOS App</h2>
+        <p>Android Biz와 동일 목적의 SwiftUI 하이브리드 앱. WKWebView로 비즈 웹을 호스팅하고, NSE·SPM·탈옥 탐지로 네이티브 책임을 담당합니다.</p>
+        <div class="chips">
+          <span class="chip">SwiftUI</span>
+          <span class="chip">WKWebView</span>
+          <span class="chip">SPM</span>
+          <span class="chip">NSE</span>
+          <span class="chip">v1.0.9</span>
+        </div>
+      </div>
+
+      <section id="overview">
+        <h3>1. Overview</h3>
+        <div class="card-grid">
+          <div class="card"><strong>앱 이름</strong><span>Doobeom</span></div>
+          <div class="card"><strong>Web Root</strong><span>https://m.doobeom.com</span></div>
+          <div class="card"><strong>브릿지명</strong><span>Doobeom_iOS</span></div>
+          <div class="card"><strong>UI</strong><span>SwiftUI + UIKit Delegate</span></div>
+        </div>
+      </section>
+
+      <section id="parity">
+        <h3>2. Android와의 대칭 구조</h3>
+        <div class="diagram">
+          <div class="diagram-label">크로스플랫폼 기능 매핑</div>
+          <pre class="mermaid">
+flowchart LR
+  subgraph Android["db-biz-android"]
+    A1[Compose Views]
+    A2[JS Bridge]
+    A3[RootBeer]
+    A4[FlareLane]
+  end
+  subgraph iOS["db-biz-ios ★"]
+    I1[SwiftUI Views]
+    I2[Doobeom_iOS handler]
+    I3[Jailbreak + C check]
+    I4[FlareLane + NSE]
+  end
+  A1 -.동일 UX.-> I1
+  A2 -.동일 계약.-> I2
+  A3 -.보안.-> I3
+  A4 -.푸시.-> I4
+          </pre>
+        </div>
+      </section>
+
+      <section id="stack">
+        <h3>3. Tech Stack</h3>
+        <div class="diagram">
+          <div class="diagram-label">SPM 의존성 맵</div>
+          <pre class="mermaid">
+flowchart TB
+  APP[Doobeom App]
+  APP --> FB[Firebase iOS SDK 11.x]
+  APP --> FL[FlareLane]
+  APP --> AB[Airbridge 4.4.2]
+  APP --> FACE[Facebook iOS SDK 17.4]
+  APP --> AL[Alamofire 5.10]
+  FL --> NSE[Notification Service Extension]
+          </pre>
+        </div>
+        <table>
+          <tr><th>영역</th><th>기술</th></tr>
+          <tr><td>UI</td><td>SwiftUI, @UIApplicationDelegateAdaptor</td></tr>
+          <tr><td>Web</td><td>WKWebView (CBWebView)</td></tr>
+          <tr><td>패키징</td><td>Swift Package Manager</td></tr>
+          <tr><td>Native C</td><td>CModules/debug_check.c</td></tr>
+        </table>
+      </section>
+
+      <section id="arch">
+        <h3>4. 아키텍처</h3>
+        <div class="diagram">
+          <div class="diagram-label">경량 MVVM + Hybrid</div>
+          <pre class="mermaid">
+flowchart TB
+  subgraph AppLife
+    AD[CBAppDelegate]
+    SD[CBSceneDelegate]
+    ROOT[DoobeomApp]
+  end
+  subgraph UI
+    PV[PermissionView]
+    CV[ContentView / WebView]
+    SET[Setting Sheet]
+  end
+  subgraph VM
+    PVM[PermissionViewModel]
+  end
+  subgraph Core
+    WV[CBWebView]
+    MD[Model]
+    UT[Util / Extension]
+  end
+  ROOT --> AD
+  ROOT --> SD
+  ROOT --> PV
+  ROOT --> CV
+  PV --> PVM
+  CV --> WV
+  WV --> MD
+  AD --> UT
+          </pre>
+        </div>
+      </section>
+
+      <section id="flow">
+        <h3>5. 화면 / 권한 플로우</h3>
+        <div class="diagram">
+          <div class="diagram-label">Permission 게이트</div>
+          <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Check: 앱 실행
+  Check --> PermissionView: KEY_ISPERMISSION = false
+  Check --> ContentView: KEY_ISPERMISSION = true
+  PermissionView --> ContentView: 허용 완료
+  ContentView --> SettingSheet: 설정 요청
+  SettingSheet --> ContentView: 닫기
+  ContentView --> [*]: 백그라운드/종료
+          </pre>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">시퀀스</div>
+          <pre class="mermaid">
+sequenceDiagram
+  participant U as User
+  participant App as DoobeomApp
+  participant P as PermissionView
+  participant W as CBWebView
+  participant Web as m.doobeom.com
+  U->>App: Launch
+  App->>P: 최초 실행
+  P-->>App: 권한 저장
+  App->>W: ContentView
+  W->>Web: load URL
+  Web->>W: Doobeom_iOS bridge
+  W-->>Web: Native response
+          </pre>
+        </div>
+      </section>
+
+      <section id="webview">
+        <h3>6. WKWebView & Bridge</h3>
+        <ul>
+          <li>메시지 핸들러 이름: <code>Doobeom_iOS</code></li>
+          <li>URL 스킴 / 딥링크 처리, 백그라운드 이미지 오버레이</li>
+          <li>설정 시트, FlareLane·Airbridge 연동</li>
+        </ul>
+        <div class="diagram">
+          <div class="diagram-label">브릿지 데이터 흐름</div>
+          <pre class="mermaid">
+flowchart LR
+  JS[JavaScript] -->|postMessage| H[WKScriptMessageHandler]
+  H --> R{Route}
+  R --> S[Settings]
+  R --> F[FlareLane]
+  R --> A[Airbridge / Analytics]
+  R --> N[Navigation]
+  S --> JS
+  F --> JS
+          </pre>
+        </div>
+      </section>
+
+      <section id="nse">
+        <h3>7. Notification Service Extension</h3>
+        <div class="diagram">
+          <div class="diagram-label">리치 푸시 파이프라인</div>
+          <pre class="mermaid">
+flowchart LR
+  SRV[Push Server] --> APNs
+  APNs --> NSE[DoobeomNotification<br/>ServiceExtension]
+  NSE --> FL[FlareLaneNotification<br/>ServiceExtension]
+  FL --> RICH[이미지/미디어 첨부]
+  RICH --> DEV[User Device]
+          </pre>
+        </div>
+      </section>
+
+      <section id="structure">
+        <h3>8. 디렉터리 구조</h3>
+        <div class="diagram">
+          <div class="diagram-label">프로젝트 트리</div>
+          <pre class="mermaid">
+flowchart TD
+  R[db-biz-ios]
+  R --> C[Doobeom/]
+  R --> N[NotificationServiceExtension/]
+  R --> CM[CModules/]
+  R --> X[Doobeom.xcodeproj]
+  C --> V[views + components]
+  C --> VM[viewmodels]
+  C --> W[WebView/CBWebView.swift]
+  C --> M[Model / Util / Extension]
+  C --> D[CBAppDelegate · SceneDelegate]
+          </pre>
+        </div>
+      </section>
+
+      <section id="security">
+        <h3>9. 탈옥 / 디버거 탐지</h3>
+        <div class="diagram">
+          <div class="diagram-label">이중 탐지 레이어</div>
+          <pre class="mermaid">
+flowchart TB
+  START[App Launch] --> SW[JailbreakDetector Swift]
+  START --> C[CModules debug_check.c]
+  SW --> M{탈옥/디버거?}
+  C --> M
+  M -->|No| OK[정상 실행]
+  M -->|Yes| BLOCK[차단 / 종료]
+          </pre>
+        </div>
+      </section>
+
+      <section id="highlights">
+        <h3>10. 기술 하이라이트</h3>
+        <div class="card-grid">
+          <div class="card"><strong>SwiftUI Hybrid</strong><span>선언형 UI + WKWebView</span></div>
+          <div class="card"><strong>NSE</strong><span>FlareLane 리치 알림</span></div>
+          <div class="card"><strong>C Bridging</strong><span>저수준 디버거 탐지</span></div>
+          <div class="card"><strong>SPM</strong><span>Firebase · Airbridge · Facebook</span></div>
+        </div>
+      </section>
+
+      <footer>doobeom Portfolio · portfolio-db-biz-ios · doobeom Mobile</footer>
+    </div>
+  </div>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    const links = document.querySelectorAll('aside nav a');
+    const secs = [...links].map(a => document.querySelector(a.getAttribute('href')));
+    const onScroll = () => {
+      let cur = secs[0];
+      for (const s of secs) if (s && s.getBoundingClientRect().top <= 120) cur = s;
+      links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + (cur && cur.id)));
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  </script>
+    <script src="../assets/js/toc.js" defer></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/nav.js" defer></script>
+</body>
+</html>

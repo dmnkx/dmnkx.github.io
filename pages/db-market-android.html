@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>두범마켓 Android — doobeom Portfolio</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/theme.css" />
+  <link rel="stylesheet" href="../assets/css/nav.css" />
+</head>
+<body>
+    <div class="layout">
+    <aside class="toc" aria-label="목차">
+      <p class="toc-label">Contents</p>
+      <nav>
+        <a href="#overview"><span class="num">01</span>Overview</a>
+        <a href="#stack"><span class="num">02</span>Tech Stack</a>
+        <a href="#arch"><span class="num">03</span>아키텍처</a>
+        <a href="#flow"><span class="num">04</span>앱 진입 플로우</a>
+        <a href="#bridge"><span class="num">05</span>WebView Bridge</a>
+        <a href="#auth"><span class="num">06</span>SNS 로그인</a>
+        <a href="#deeplink"><span class="num">07</span>딥링크</a>
+        <a href="#flavor"><span class="num">08</span>Flavor / 환경</a>
+        <a href="#cicd"><span class="num">09</span>CI/CD</a>
+        <a href="#structure"><span class="num">10</span>디렉터리</a>
+        <a href="#highlights"><span class="num">11</span>하이라이트</a>
+      </nav>
+    </aside>
+
+    <div class="wrap">
+    <details class="toc-mobile">
+      <summary>목차</summary>
+      <nav>
+        <a href="#overview">01 · Overview</a>
+        <a href="#stack">02 · Tech Stack</a>
+        <a href="#arch">03 · 아키텍처</a>
+        <a href="#flow">04 · 앱 진입 플로우</a>
+        <a href="#bridge">05 · WebView Bridge</a>
+        <a href="#auth">06 · SNS 로그인</a>
+        <a href="#deeplink">07 · 딥링크</a>
+        <a href="#flavor">08 · Flavor / 환경</a>
+        <a href="#cicd">09 · CI/CD</a>
+        <a href="#structure">10 · 디렉터리</a>
+        <a href="#highlights">11 · 하이라이트</a>
+      </nav>
+    </details>
+
+<div class="hero">
+        <h2>두범마켓 — Consumer Commerce Hybrid App</h2>
+        <p>식품 커머스 소비자 앱. 네이티브가 Splash·버전점검·SNS 로그인·푸시·딥링크·결제를 담당하고, 본 서비스는 WebView로 구동합니다.</p>
+        <div class="chips">
+          <span class="chip">Kotlin + Compose</span>
+          <span class="chip">Koin MVVM</span>
+          <span class="chip">Fastlane</span>
+          <span class="chip">v1.0.50</span>
+          <span class="chip">targetSdk 35</span>
+        </div>
+      </div>
+
+      <section id="overview">
+        <h3>1. Overview</h3>
+        <div class="card-grid">
+          <div class="card"><strong>패키지</strong><span>com.doobeom</span></div>
+          <div class="card"><strong>버전</strong><span>~1.0.50 (versionCode 205)</span></div>
+          <div class="card"><strong>min / target</strong><span>24 / 35</span></div>
+          <div class="card"><strong>패턴</strong><span>Hybrid + MVVM + Koin</span></div>
+        </div>
+      </section>
+
+      <section id="stack">
+        <h3>2. Tech Stack</h3>
+        <div class="diagram">
+          <div class="diagram-label">스택 레이어</div>
+          <pre class="mermaid">
+block-beta
+  columns 1
+  block:ui:1
+    columns 4
+    A["Compose"] B["ViewBinding"] C["Splash/WebView"] D["Permission"]
+  end
+  block:arch:1
+    columns 4
+    E["Koin DI"] F["ViewModel"] G["LiveData"] H["Coroutines"]
+  end
+  block:data:1
+    columns 4
+    I["Retrofit"] J["OkHttp"] K["Serialization"] L["EasyPrefs"]
+  end
+  block:sdk:1
+    columns 5
+    M["Firebase"] N["Kakao"] O["Naver"] P["Google"] Q["Facebook"]
+  end
+  block:grow:1
+    columns 3
+    R["Airbridge"] S["FlareLane"] T["Play Review"]
+  end
+  ui --> arch --> data --> sdk --> grow
+          </pre>
+        </div>
+      </section>
+
+      <section id="arch">
+        <h3>3. 아키텍처</h3>
+        <div class="diagram">
+          <div class="diagram-label">Hybrid + MVVM + Repository-lite</div>
+          <pre class="mermaid">
+flowchart TB
+  subgraph UI
+    SPL[ui/splash]
+    WV[ui/webview]
+    AUTH[ui/auth]
+    PUSH[ui/push]
+    PERM[ui/permission]
+  end
+  subgraph DI
+    KOIN[Koin Modules]
+  end
+  subgraph Data
+    DM[DataManager]
+    API[ApiService]
+    REM[data/source/remote]
+    MOD[data/model]
+  end
+  subgraph Bridge
+    BR[WebViewBridge<br/>Doobeom_Android]
+  end
+  SPL --> KOIN
+  WV --> BR
+  AUTH --> KOIN
+  KOIN --> DM
+  KOIN --> API
+  API --> REM
+  REM --> MOD
+  BR --> AUTH
+  BR --> PUSH
+          </pre>
+        </div>
+      </section>
+
+      <section id="flow">
+        <h3>4. 앱 진입 플로우</h3>
+        <div class="diagram">
+          <div class="diagram-label">Splash → Permission → Version → WebView</div>
+          <pre class="mermaid">
+flowchart LR
+  A[Splash] --> B[권한]
+  B --> C[버전 / 점검 체크]
+  C -->|정상| D[WebView Main]
+  C -->|강제업데이트| E[스토어 유도]
+  C -->|점검중| F[점검 화면]
+  D --> G[서브 WebView<br/>팝업/결제 최대 2단]
+          </pre>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">시퀀스</div>
+          <pre class="mermaid">
+sequenceDiagram
+  participant U as User
+  participant S as Splash
+  participant API as Backend
+  participant W as WebView
+  participant BR as Bridge
+  U->>S: Launch
+  S->>API: version / maintenance
+  API-->>S: OK
+  S->>W: open main
+  W->>BR: SNS / push / token
+  BR-->>W: native result
+          </pre>
+        </div>
+      </section>
+
+      <section id="bridge">
+        <h3>5. WebView Bridge</h3>
+        <p>인터페이스명 <code>Doobeom_Android</code> — 토큰, 푸시, SNS 로그인, UI 제어를 웹에 노출합니다.</p>
+        <div class="diagram">
+          <div class="diagram-label">브릿지 커맨드 맵</div>
+          <pre class="mermaid">
+flowchart TB
+  WEB[Web JS] --> BR[Doobeom_Android]
+  BR --> T[Token / Session]
+  BR --> P[Push Subscribe]
+  BR --> L[SNS Login]
+  BR --> U[UI Control]
+  BR --> PAY[Payment / Sub WebView]
+  L --> KAKAO & NAVER & GOOGLE & FB & APPLE
+          </pre>
+        </div>
+      </section>
+
+      <section id="auth">
+        <h3>6. SNS 로그인</h3>
+        <div class="diagram">
+          <div class="diagram-label">소셜 로그인 허브</div>
+          <pre class="mermaid">
+mindmap
+  root((SNS Auth))
+    Kakao
+    Naver
+    Google
+      Credentials API
+      Google ID
+    Facebook
+    Apple
+          </pre>
+        </div>
+      </section>
+
+      <section id="deeplink">
+        <h3>7. 딥링크 / 어트리뷰션</h3>
+        <div class="diagram">
+          <div class="diagram-label">인입 경로</div>
+          <pre class="mermaid">
+flowchart LR
+  subgraph Schemes
+    S1[doobeom]
+    S2[doobeom]
+  end
+  subgraph Platforms
+    FDL[Firebase Dynamic Links]
+    FB[Facebook]
+    AB[Airbridge]
+  end
+  S1 --> APP[Market App]
+  S2 --> APP
+  FDL --> APP
+  FB --> APP
+  AB --> APP
+  APP --> WV[WebView Routing]
+          </pre>
+        </div>
+      </section>
+
+      <section id="flavor">
+        <h3>8. Product Flavors</h3>
+        <div class="diagram">
+          <div class="diagram-label">환경 매트릭스</div>
+          <pre class="mermaid">
+flowchart TB
+  F[Product Flavors]
+  F --> DEV[dev]
+  F --> STG[stg]
+  F --> PROD[prod + ABI split]
+  F --> DEVX[개발자별 flavor]
+  DEV --> URL1[서버 URL / 앱 이름]
+  STG --> URL1
+  PROD --> URL1
+          </pre>
+        </div>
+      </section>
+
+      <section id="cicd">
+        <h3>9. CI/CD</h3>
+        <div class="diagram">
+          <div class="diagram-label">GitHub Actions → Firebase App Distribution</div>
+          <pre class="mermaid">
+flowchart LR
+  DIS[workflow_dispatch<br/>env 선택] --> AWS[AWS Secrets Manager]
+  AWS --> KS[Keystore 복원]
+  KS --> FL[Fastlane]
+  FL --> BUILD[Gradle Build]
+  BUILD --> FAD[Firebase App Distribution]
+          </pre>
+        </div>
+        <ul>
+          <li><code>publish-dev.yml</code> — 수동 배포 트리거</li>
+          <li>환경별 서버 URL · 앱 이름 주입</li>
+          <li>상세 인수인계 문서(<code>인수인계.md</code>) 보유</li>
+        </ul>
+      </section>
+
+      <section id="structure">
+        <h3>10. 디렉터리 구조</h3>
+        <div class="diagram">
+          <div class="diagram-label">주요 패키지</div>
+          <pre class="mermaid">
+flowchart TD
+  R[com.doobeom]
+  R --> UI[ui/ splash webview auth push permission]
+  R --> DATA[data/ source model]
+  R --> NET[network]
+  R --> MOD[module Koin]
+  R --> FB[firebase]
+  R --> BR[bridgeInterface]
+  R --> UT[util pref]
+  R --> APP[DoobeomApplication]
+          </pre>
+        </div>
+      </section>
+
+      <section id="highlights">
+        <h3>11. 기술 하이라이트</h3>
+        <div class="card-grid">
+          <div class="card"><strong>Koin DI</strong><span>DataManager / Api / VM 주입</span></div>
+          <div class="card"><strong>이중 WebView</strong><span>팝업·결제 최대 2단</span></div>
+          <div class="card"><strong>측정</strong><span>DAU/WAU/MAU · In-App Review</span></div>
+          <div class="card"><strong>보안</strong><span>RootBeer · reCAPTCHA</span></div>
+          <div class="card"><strong>배포</strong><span>Fastlane + Actions</span></div>
+          <div class="card"><strong>문서</strong><span>인수인계.md 브릿지 계약</span></div>
+        </div>
+      </section>
+
+      <footer>doobeom Portfolio · portfolio-db-market-android · doobeom Mobile</footer>
+    </div>
+  </div>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    const links = document.querySelectorAll('aside nav a');
+    const secs = [...links].map(a => document.querySelector(a.getAttribute('href')));
+    const onScroll = () => {
+      let cur = secs[0];
+      for (const s of secs) if (s && s.getBoundingClientRect().top <= 120) cur = s;
+      links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + (cur && cur.id)));
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  </script>
+    <script src="../assets/js/toc.js" defer></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/nav.js" defer></script>
+</body>
+</html>
