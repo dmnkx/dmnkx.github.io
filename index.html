@@ -209,27 +209,36 @@
           카드를 선택하거나 상단 탭으로 각 프로젝트를 바로 열 수 있습니다.
         </p>
 
-        <div class="group-label">Infra</div>
-        <div class="cards" id="cards-infra"></div>
+        <section class="card-group" data-group="infra">
+          <div class="group-label">Infra</div>
+          <div class="cards" id="cards-infra"></div>
+        </section>
 
-        <div class="group-label">CI</div>
-        <div class="cards" id="cards-ci"></div>
+        <section class="card-group" data-group="ci">
+          <div class="group-label">CI</div>
+          <div class="cards" id="cards-ci"></div>
+        </section>
 
-        <div class="group-label">Mobile</div>
-        <div class="cards" id="cards-mobile"></div>
+        <section class="card-group" data-group="mobile">
+          <div class="group-label">Mobile</div>
+          <div class="cards" id="cards-mobile"></div>
+        </section>
 
-        <div class="group-label">ML / Data</div>
-        <div class="cards" id="cards-ml"></div>
+        <section class="card-group" data-group="ml">
+          <div class="group-label">ML / Data</div>
+          <div class="cards" id="cards-ml"></div>
+        </section>
       </div>
     </main>
 
     <iframe class="viewer hidden" id="viewer" title="포트폴리오 뷰어"></iframe>
   </div>
 
-  <script src="assets/js/catalog.js"></script>
+  <script src="assets/js/catalog.js?v=20260715b"></script>
   <script>
     (function () {
       var PORTFOLIOS = window.PORTFOLIOS || [];
+      var CI_IDS = { jenkins: 1, "github-actions": 1, playwright: 1 };
 
       var ICONS = {
         batch:
@@ -257,16 +266,24 @@
       var tabList = document.getElementById("tab-list");
       var landing = document.getElementById("landing");
       var viewer = document.getElementById("viewer");
-      var cardsInfra = document.getElementById("cards-infra");
-      var cardsCi = document.getElementById("cards-ci");
-      var cardsMobile = document.getElementById("cards-mobile");
-      var cardsMl = document.getElementById("cards-ml");
+      var cardsByGroup = {
+        infra: document.getElementById("cards-infra"),
+        ci: document.getElementById("cards-ci"),
+        mobile: document.getElementById("cards-mobile"),
+        ml: document.getElementById("cards-ml")
+      };
 
-      function cardsFor(group) {
-        if (group === "infra") return cardsInfra;
-        if (group === "ci") return cardsCi;
-        if (group === "ml") return cardsMl;
-        return cardsMobile;
+      function resolveGroup(item) {
+        var group = item.group;
+        // 캐시된 옛 catalog(group: "doobeom") 호환
+        if (group === "doobeom") {
+          group = CI_IDS[item.id] ? "ci" : "infra";
+        }
+        return group;
+      }
+
+      function cardsFor(item) {
+        return cardsByGroup[resolveGroup(item)] || cardsByGroup.mobile;
       }
 
       PORTFOLIOS.forEach(function (item) {
@@ -286,7 +303,7 @@
           "<strong>" + item.label + "</strong>" +
           "<span class=\"desc\">" + item.desc + "</span>" +
           "<span class=\"file\">" + item.file + "</span>";
-        cardsFor(item.group).appendChild(card);
+        cardsFor(item).appendChild(card);
       });
 
       function showHome() {
