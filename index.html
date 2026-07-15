@@ -215,8 +215,13 @@
         </section>
 
         <section class="card-group" data-group="ci">
-          <div class="group-label">CI</div>
+          <div class="group-label">CI/CD</div>
           <div class="cards" id="cards-ci"></div>
+        </section>
+
+        <section class="card-group" data-group="qa">
+          <div class="group-label">QA</div>
+          <div class="cards" id="cards-qa"></div>
         </section>
 
         <section class="card-group" data-group="mobile">
@@ -234,11 +239,12 @@
     <iframe class="viewer hidden" id="viewer" title="포트폴리오 뷰어"></iframe>
   </div>
 
-  <script src="assets/js/catalog.js?v=20260715b"></script>
+  <script src="assets/js/catalog.js?v=20260715c"></script>
   <script>
     (function () {
       var PORTFOLIOS = window.PORTFOLIOS || [];
-      var CI_IDS = { jenkins: 1, "github-actions": 1, playwright: 1 };
+      var CI_IDS = { jenkins: 1, "github-actions": 1 };
+      var QA_IDS = { playwright: 1 };
 
       var ICONS = {
         batch:
@@ -269,13 +275,15 @@
       var cardsByGroup = {
         infra: document.getElementById("cards-infra"),
         ci: document.getElementById("cards-ci"),
+        qa: document.getElementById("cards-qa"),
         mobile: document.getElementById("cards-mobile"),
         ml: document.getElementById("cards-ml")
       };
 
       function resolveGroup(item) {
         var group = item.group;
-        // 캐시된 옛 catalog(group: "doobeom") 호환
+        // 캐시된 옛 catalog 호환
+        if (QA_IDS[item.id]) return "qa";
         if (group === "doobeom") {
           group = CI_IDS[item.id] ? "ci" : "infra";
         }

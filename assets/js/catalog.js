@@ -5,7 +5,7 @@ window.PORTFOLIOS = [
   { id: "importer", file: "pages/importer.html", label: "Analysis Importer", group: "infra", desc: "두범비즈 통계 ETL 업로더", icon: "importer" },
   { id: "jenkins", file: "pages/jenkins.html", label: "Jenkins Pipeline", group: "ci", desc: "공유 파이프라인 라이브러리", icon: "jenkins" },
   { id: "github-actions", file: "pages/github-actions.html", label: "GitHub Actions", group: "ci", desc: "공용 Actions · 언어별 배포 플랫폼", icon: "actions" },
-  { id: "playwright", file: "pages/playwright.html", label: "Playwright E2E", group: "ci", desc: "두범마켓 E2E 자동화 테스트", icon: "playwright" },
+  { id: "playwright", file: "pages/playwright.html", label: "Playwright E2E", group: "qa", desc: "두범마켓 E2E 자동화 테스트", icon: "playwright" },
   { id: "db-biz-android", file: "pages/db-biz-android.html", label: "비즈 Android", group: "mobile", desc: "두범비즈 Android", icon: "android" },
   { id: "db-biz-ios", file: "pages/db-biz-ios.html", label: "비즈 iOS", group: "mobile", desc: "두범비즈 iOS", icon: "apple" },
   { id: "db-market-android", file: "pages/db-market-android.html", label: "마켓 Android", group: "mobile", desc: "두범마켓 Android", icon: "android" },
