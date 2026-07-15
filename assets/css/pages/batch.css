@@ -10,15 +10,6 @@
   margin: 0;
   padding: 0 0 2rem;
 }
-.anonymize-note {
-  margin: 1.25rem 0;
-  padding: 0.85rem 1rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 0.85rem;
-  color: var(--muted);
-}
 .hero {
       background: var(--hero);
       border: 1px solid var(--border);
@@ -539,16 +530,6 @@ h4 {
       color: var(--text-muted);
       margin-top: 0.2rem;
       line-height: 1.35;
-    }
-
-    .anonymize-note {
-      background: rgba(251,191,36,0.08);
-      border: 1px solid rgba(251,191,36,0.28);
-      border-radius: 8px;
-      padding: 0.9rem 1.1rem;
-      font-size: 0.85rem;
-      color: var(--warning);
-      margin: 2rem 0 0;
     }
 
 .wrap > footer {

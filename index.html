@@ -160,7 +160,7 @@
         <div class="landing-brand">doobeom</div>
         <h1>포트폴리오</h1>
         <p class="lead">
-          IaC·CI/CD·자동화 인프라와 모바일 앱 아키텍처를 정리한 문서모음입니다.
+          IaC·CI/CD·자동화 인프라, 모바일 앱 아키텍처, ML 실험을 정리한 문서모음입니다.
           상단 탭으로 각 프로젝트를 바로 열 수 있습니다.
         </p>
 
@@ -169,6 +169,9 @@
 
         <div class="group-label">doobeom — Mobile</div>
         <div class="cards" id="cards-mobile"></div>
+
+        <div class="group-label">ML / Data</div>
+        <div class="cards" id="cards-ml"></div>
       </div>
     </main>
 
@@ -185,6 +188,13 @@
       var viewer = document.getElementById("viewer");
       var cardsDoobeom = document.getElementById("cards-doobeom");
       var cardsMobile = document.getElementById("cards-mobile");
+      var cardsMl = document.getElementById("cards-ml");
+
+      function cardsFor(group) {
+        if (group === "doobeom") return cardsDoobeom;
+        if (group === "ml") return cardsMl;
+        return cardsMobile;
+      }
 
       PORTFOLIOS.forEach(function (item) {
         var a = document.createElement("a");
@@ -201,7 +211,7 @@
           "<strong>" + item.label + "</strong>" +
           "<span>" + item.desc + "</span>" +
           "<span class=\"file\">" + item.file + "</span>";
-        (item.group === "doobeom" ? cardsDoobeom : cardsMobile).appendChild(card);
+        cardsFor(item.group).appendChild(card);
       });
 
       function showHome() {

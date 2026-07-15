@@ -9,5 +9,6 @@ window.PORTFOLIOS = [
   { id: "db-biz-ios", file: "pages/db-biz-ios.html", label: "비즈 iOS", group: "mobile", desc: "두범비즈 iOS" },
   { id: "db-market-android", file: "pages/db-market-android.html", label: "마켓 Android", group: "mobile", desc: "두범마켓 Android" },
   { id: "db-market-ios", file: "pages/db-market-ios.html", label: "마켓 iOS", group: "mobile", desc: "두범마켓 iOS" },
-  { id: "review-scraper", file: "pages/app-review-scraper.html", label: "리뷰 스크래퍼", group: "mobile", desc: "앱 스토어 리뷰 수집" }
+  { id: "review-scraper", file: "pages/app-review-scraper.html", label: "리뷰 스크래퍼", group: "mobile", desc: "앱 스토어 리뷰 수집" },
+  { id: "cat-vs-dog", file: "pages/cat-vs-dog.html", label: "Cat vs Dog", group: "ml", desc: "CNN 이미지 이진 분류" }
 ];

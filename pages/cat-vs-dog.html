@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cat vs Dog Classification — doobeom Portfolio</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/theme.css" />
+  <link rel="stylesheet" href="../assets/css/nav.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="toc" aria-label="목차">
+      <p class="toc-label">Contents</p>
+      <nav>
+        <a href="#overview"><span class="num">01</span>Overview</a>
+        <a href="#problem"><span class="num">02</span>문제 · 데이터</a>
+        <a href="#pipeline"><span class="num">03</span>파이프라인</a>
+        <a href="#stack"><span class="num">04</span>Tech Stack</a>
+        <a href="#helpers"><span class="num">05</span>학습 유틸</a>
+        <a href="#experiments"><span class="num">06</span>실험 흐름</a>
+        <a href="#architecture"><span class="num">07</span>최종 아키텍처</a>
+        <a href="#results"><span class="num">08</span>결과</a>
+        <a href="#structure"><span class="num">09</span>디렉터리</a>
+        <a href="#highlights"><span class="num">10</span>하이라이트</a>
+      </nav>
+    </aside>
+
+    <div class="wrap">
+      <details class="toc-mobile">
+        <summary>목차</summary>
+        <nav>
+          <a href="#overview">01 · Overview</a>
+          <a href="#problem">02 · 문제 · 데이터</a>
+          <a href="#pipeline">03 · 파이프라인</a>
+          <a href="#stack">04 · Tech Stack</a>
+          <a href="#helpers">05 · 학습 유틸</a>
+          <a href="#experiments">06 · 실험 흐름</a>
+          <a href="#architecture">07 · 최종 아키텍처</a>
+          <a href="#results">08 · 결과</a>
+          <a href="#structure">09 · 디렉터리</a>
+          <a href="#highlights">10 · 하이라이트</a>
+        </nav>
+      </details>
+
+      <div class="hero">
+        <h2>Cat vs Dog — CNN 이미지 분류</h2>
+        <p>
+          Kaggle Dogs vs Cats 이진 분류를 TensorFlow/Keras CNN으로 반복 실험한 노트북입니다.
+          베이스라인부터 multi-kernel concatenate · Leaky ReLU · Image Augmentation까지
+          구조·정규화·데이터 확장을 단계적으로 개선해 log-loss를 낮췄습니다.
+        </p>
+        <div class="chips">
+          <span class="chip">TensorFlow / Keras</span>
+          <span class="chip">CNN</span>
+          <span class="chip">Image Augmentation</span>
+          <span class="chip">Jupyter</span>
+          <span class="chip">Kaggle Submission</span>
+        </div>
+      </div>
+
+      <section id="overview">
+        <h3>1. Overview</h3>
+        <div class="card-grid">
+          <div class="card"><strong>유형</strong><span>Binary Image Classification</span></div>
+          <div class="card"><strong>목표</strong><span>개 / 고양이 확률 예측 (log-loss)</span></div>
+          <div class="card"><strong>입력</strong><span>128×128 RGB</span></div>
+          <div class="card"><strong>산출</strong><span>submission CSV · best .h5</span></div>
+        </div>
+      </section>
+
+      <section id="problem">
+        <h3>2. 문제 · 데이터</h3>
+        <p>
+          학습 이미지는 <code>train/</code> 디렉터리 클래스 구조로 로드하고,
+          검증은 <code>validation_split=0.2</code>로 분리합니다.
+          제출용 테스트는 라벨이 없는 <code>test/</code> 이미지 배치입니다.
+        </p>
+        <table>
+          <tr><th>항목</th><th>값</th></tr>
+          <tr><td>배치 크기</td><td><code>BATCH_SIZE = 32</code> (후반 실험에서 128도 시도)</td></tr>
+          <tr><td>입력 해상도</td><td><code>IMAGE_SIZE = (128, 128)</code></td></tr>
+          <tr><td>손실</td><td><code>binary_crossentropy</code></td></tr>
+          <tr><td>출력</td><td>Sigmoid 확률 · 제출 라벨</td></tr>
+          <tr><td>평가</td><td>Kaggle log-loss (낮을수록 좋음)</td></tr>
+        </table>
+        <div class="diagram">
+          <div class="diagram-label">데이터셋 구성</div>
+          <pre class="mermaid">
+flowchart LR
+  TRAIN["train/"] --> SPLIT["image_dataset_from_directory\nvalidation_split=0.2"]
+  SPLIT --> TR["train_ds"]
+  SPLIT --> VA["val_ds"]
+  TEST["test/"] --> TE["test_ds"]
+  TR --> FIT[model.fit]
+  VA --> FIT
+  TE --> PRED[predict → submission CSV]
+          </pre>
+        </div>
+      </section>
+
+      <section id="pipeline">
+        <h3>3. 파이프라인</h3>
+        <div class="diagram">
+          <div class="diagram-label">학습 · 제출 루프</div>
+          <pre class="mermaid">
+flowchart TB
+  A[데이터 로드] --> B[증강 선택적 적용]
+  B --> C[CNN 구성]
+  C --> D[compile · adam + BCE]
+  D --> E[fit + callbacks]
+  E --> F{val_loss 개선?}
+  F -->|yes| G[ModelCheckpoint .h5]
+  F -->|EarlyStopping| H[predict test]
+  G --> H
+  H --> I[save_preds → CSV]
+  I --> J[Kaggle Submit]
+          </pre>
+        </div>
+      </section>
+
+      <section id="stack">
+        <h3>4. Tech Stack</h3>
+        <div class="diagram">
+          <div class="diagram-label">의존성 맵</div>
+          <pre class="mermaid">
+mindmap
+  root((cat_vs_dog))
+    Framework
+      TensorFlow
+      Keras Functional API
+    Data
+      image_dataset_from_directory
+      ImageDataGenerator
+      pandas
+      numpy
+    Train
+      Conv2D MaxPool Dropout
+      concatenate multi-kernel
+      LeakyReLU
+      Adam
+    Ops
+      ModelCheckpoint
+      EarlyStopping
+      ReduceLROnPlateau
+      TensorBoard
+          </pre>
+        </div>
+      </section>
+
+      <section id="helpers">
+        <h3>5. 학습 유틸</h3>
+        <p>노트북 초반에 반복 실험을 위한화하는 헬퍼를 둡니다.</p>
+        <div class="card-grid">
+          <div class="card"><strong>get_callbacks()</strong><span>Checkpoint · EarlyStopping · ReduceLROnPlateau</span></div>
+          <div class="card"><strong>get_model()</strong><span>Model 생성 · summary · compile</span></div>
+          <div class="card"><strong>run()</strong><span>fit → predict → save_preds 일괄 실행</span></div>
+          <div class="card"><strong>save_preds()</strong><span>샘플 제출 포맷에 맞춰 CSV 저장</span></div>
+        </div>
+<pre><code>def get_callbacks(early_patience=10, reduce_patience=3):
+    checkpoint_cb = ModelCheckpoint(f"model/best-model_{get_filename()}.h5",
+                                    save_best_only=True)
+    early_stopping_cb = EarlyStopping(patience=early_patience,
+                                      restore_best_weights=True)
+    reduceLR_cb = ReduceLROnPlateau(monitor="val_loss",
+                                    factor=0.5, patience=reduce_patience)
+    return [checkpoint_cb, early_stopping_cb, reduceLR_cb]</code></pre>
+      </section>
+
+      <section id="experiments">
+        <h3>6. 실험 흐름</h3>
+        <p>단순 Sequential CNN에서 시작해 과적합·표현력 문제를 하나씩 해결했습니다.</p>
+        <div class="diagram">
+          <div class="diagram-label">개선 축</div>
+          <pre class="mermaid">
+flowchart TD
+  B1["베이스라인\nConv→Pool→Dense"] --> B2["Conv 층 추가"]
+  B2 --> B3["Augmentation\noverfitting 완화"]
+  B3 --> B4["multi-kernel Concat\n3/4/5/6"]
+  B4 --> B5["Dropout · MaxPool 조정"]
+  B5 --> B6["ImageDataGenerator\n배치 확대"]
+  B6 --> B7["심층 Conv + LeakyReLU"]
+  B7 --> B8["최종 log-loss 0.1858"]
+          </pre>
+        </div>
+        <table>
+          <tr><th>단계</th><th>가설 / 변경</th><th>관측</th></tr>
+          <tr><td>Baseline</td><td>얕은 CNN</td><td>Score 0.4859</td></tr>
+          <tr><td>Deepen</td><td>Conv2D 추가</td><td>0.42514 · train acc 높음(과적합 신호)</td></tr>
+          <tr><td>Augment</td><td>RandomFlip / Rotation</td><td>과적합 완화 · 정확도 상승</td></tr>
+          <tr><td>Multi-kernel</td><td>커널 3~6 concatenate</td><td>스케일별 feature 표현</td></tr>
+          <tr><td>Regularize</td><td>Dropout · MaxPool 확대</td><td>0.28대까지 하락</td></tr>
+          <tr><td>Data scale</td><td>ImageDataGenerator · batch 128</td><td>0.27037 · 837위</td></tr>
+          <tr><td>Deep + LeakyReLU</td><td>심층 분기 + 활성함수 교체</td><td><strong>0.1858 · 763위</strong></td></tr>
+        </table>
+      </section>
+
+      <section id="architecture">
+        <h3>7. 최종 아키텍처 (요지)</h3>
+        <p>
+          성능이 좋았던 계열은 Functional API로
+          <strong>서로 다른 kernel size의 Conv 분기를 concatenate</strong>한 뒤
+          추가 Conv·Dense로 이진 확률을 낸 구조입니다. 후반부에서는 ReLU 대신 Leaky ReLU를 사용했습니다.
+        </p>
+        <div class="diagram">
+          <div class="diagram-label">Multi-kernel CNN</div>
+          <pre class="mermaid">
+flowchart TB
+  IN["Input 128x128x3"] --> C0["Conv2D 64 k=3"]
+  C0 --> P0["MaxPool · Dropout"]
+  P0 --> K4["Conv k=4"]
+  P0 --> K5["Conv k=5"]
+  P0 --> K6["Conv k=6"]
+  K4 --> CAT["concatenate"]
+  K5 --> CAT
+  K6 --> CAT
+  CAT --> C2["Conv · Pool · Dropout × N"]
+  C2 --> FL["Flatten"]
+  FL --> D1["Dense · Dropout"]
+  D1 --> OUT["Dense 1 · Sigmoid"]
+          </pre>
+        </div>
+<pre><code>x1 = Conv2D(64, 4, padding="same", activation=tf.nn.leaky_relu)(x)
+x2 = Conv2D(64, 5, padding="same", activation=tf.nn.leaky_relu)(x)
+x3 = Conv2D(64, 6, padding="same", activation=tf.nn.leaky_relu)(x)
+x  = concatenate([x1, x2, x3])
+# … 추가 Conv / Dense …
+outputs = Dense(1, activation=tf.nn.sigmoid)(x)</code></pre>
+      </section>
+
+      <section id="results">
+        <h3>8. 결과</h3>
+        <div class="card-grid">
+          <div class="card"><strong>시작</strong><span>log-loss 0.4859</span></div>
+          <div class="card"><strong>중간</strong><span>0.27대 · 약 837위</span></div>
+          <div class="card"><strong>최고</strong><span>0.1858 · 약 763위</span></div>
+          <div class="card"><strong>개선폭</strong><span>~62% log-loss 감소</span></div>
+        </div>
+        <div class="diagram">
+          <div class="diagram-label">Score 궤적 (선택 지점, log-loss ↓)</div>
+          <pre class="mermaid">
+flowchart LR
+  S1["Base\n0.4859"] --> S2["Conv+\n0.425"]
+  S2 --> S3["MultiK\n0.360"]
+  S3 --> S4["Reg\n0.287"]
+  S4 --> S5["Aug128\n0.270"]
+  S5 --> S6["Best\n0.1858"]
+          </pre>
+        </div>
+        <div class="callout">
+          점수는 Kaggle Dogs vs Cats의 log-loss 기준입니다. 낮을수록 순위가 올라갑니다.
+        </div>
+      </section>
+
+      <section id="structure">
+        <h3>9. 디렉터리</h3>
+        <div class="diagram">
+          <div class="diagram-label">프로젝트 구성</div>
+          <pre class="mermaid">
+flowchart TD
+  R[da-cat_vs_dog]
+  R --> NB[classification.ipynb]
+  R --> RD[README.md]
+  R --> TR[train/]
+  R --> TE[test/]
+  R --> MD[model/*.h5]
+  R --> SUB[submission/*.csv]
+          </pre>
+        </div>
+        <p class="muted">학습·테스트 이미지와 모델 가중치는 용량 이슈로 저장소에 포함하지 않는 구성입니다.</p>
+      </section>
+
+      <section id="highlights">
+        <h3>10. 하이라이트</h3>
+        <div class="card-grid">
+          <div class="card"><strong>반복 실험 설계</strong><span>헬퍼로 fit→predict→제출 루프 표준화</span></div>
+          <div class="card"><strong>구조 탐색</strong><span>multi-kernel concatenate로 스케일 다양화</span></div>
+          <div class="card"><strong>정규화</strong><span>Dropout · MaxPool · Augmentation으로 과적합 제어</span></div>
+          <div class="card"><strong>운영 디테일</strong><span>Checkpoint · ReduceLR · EarlyStopping</span></div>
+        </div>
+      </section>
+
+      <footer>doobeom Portfolio · pages/cat-vs-dog · ML / Data</footer>
+    </div>
+  </div>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+  <script src="../assets/js/toc.js" defer></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/nav.js" defer></script>
+</body>
+</html>
