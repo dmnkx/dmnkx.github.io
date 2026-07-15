@@ -260,7 +260,6 @@ h3.doc-title {
   border-bottom: 1px solid var(--border);
 }
 
-/* Cookat used h3 as section titles */
 .wrap section > h3:first-child,
 .layout section > h3:first-child {
   font-size: 1.3rem;
