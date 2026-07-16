@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ani Review — doobeom Portfolio</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/theme.css" />
+  <link rel="stylesheet" href="../assets/css/nav.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="toc" aria-label="목차">
+      <p class="toc-label">Contents</p>
+      <nav>
+        <a href="#overview"><span class="num">01</span>Overview</a>
+        <a href="#features"><span class="num">02</span>주요 기능</a>
+        <a href="#stack"><span class="num">03</span>Tech Stack</a>
+        <a href="#architecture"><span class="num">04</span>아키텍처</a>
+        <a href="#decisions"><span class="num">05</span>설계 결정</a>
+        <a href="#database"><span class="num">06</span>데이터베이스</a>
+        <a href="#pages"><span class="num">07</span>페이지 구성</a>
+        <a href="#structure"><span class="num">08</span>디렉터리</a>
+        <a href="#deploy"><span class="num">09</span>배포</a>
+        <a href="#highlights"><span class="num">10</span>하이라이트</a>
+      </nav>
+    </aside>
+
+    <div class="wrap">
+      <details class="toc-mobile">
+        <summary>목차</summary>
+        <nav>
+          <a href="#overview">01 · Overview</a>
+          <a href="#features">02 · 주요 기능</a>
+          <a href="#stack">03 · Tech Stack</a>
+          <a href="#architecture">04 · 아키텍처</a>
+          <a href="#decisions">05 · 설계 결정</a>
+          <a href="#database">06 · 데이터베이스</a>
+          <a href="#pages">07 · 페이지 구성</a>
+          <a href="#structure">08 · 디렉터리</a>
+          <a href="#deploy">09 · 배포</a>
+          <a href="#highlights">10 · 하이라이트</a>
+        </nav>
+      </details>
+
+      <div class="hero">
+        <h2>Ani Review — 애니 탐색 · 리뷰 커뮤니티</h2>
+        <p>
+          MyAnimeList 메타데이터는 Jikan API로 실시간 조회하고, 사용자 리뷰만 Supabase에 저장하는
+          정적 웹 앱입니다. Next.js Static Export + Vercel로 서버 없이 배포하는 풀스택 구조를 목표로 했습니다.
+        </p>
+        <p>
+          <strong>AI 활용 프로젝트</strong> — 기획·구현·배포 과정에서 AI를 활용했으며, 개발에 걸린 시간은 약 <strong>30분</strong>입니다.
+        </p>
+        <div class="chips">
+          <span class="chip">AI Assisted</span>
+          <span class="chip">~30분</span>
+          <span class="chip">Next.js 15</span>
+          <span class="chip">React 19</span>
+          <span class="chip">TypeScript</span>
+          <span class="chip">Tailwind CSS 4</span>
+          <span class="chip">Jikan API</span>
+          <span class="chip">Supabase</span>
+          <span class="chip">Vercel</span>
+        </div>
+      </div>
+
+      <section id="overview">
+        <h3>1. Overview</h3>
+        <div class="card-grid">
+          <div class="card"><strong>유형</strong><span>Static Web · Full-stack</span></div>
+          <div class="card"><strong>역할</strong><span>기획 · 설계 · 개발 · 배포 (AI 활용)</span></div>
+          <div class="card"><strong>개발 시간</strong><span>약 30분</span></div>
+          <div class="card"><strong>라이브</strong><span>private-ani-review.vercel.app</span></div>
+        </div>
+        <p>
+          수만 편의 애니 메타데이터를 직접 DB에 넣는 대신,
+          <strong>외부 API로 읽고 서비스에 필요한 리뷰만 DB에 저장</strong>하는 하이브리드 구조를 선택했습니다.
+        </p>
+      </section>
+
+      <section id="features">
+        <h3>2. 주요 기능</h3>
+        <div class="card-grid">
+          <div class="card"><strong>애니 탐색</strong><span>인기 순위 · 제목 검색 · 상세(포스터/줄거리/장르/MAL 평점)</span></div>
+          <div class="card"><strong>리뷰</strong><span>닉네임 · 1~10 별점 · 제목/본문 · 커뮤니티 평균 평점</span></div>
+          <div class="card"><strong>피드</strong><span>홈 최신 리뷰 · 전체 리뷰 목록</span></div>
+          <div class="card"><strong>UX</strong><span>다크 테마 · 로딩/빈 상태 · 한국어 제목 오버라이드</span></div>
+        </div>
+      </section>
+
+      <section id="stack">
+        <h3>3. Tech Stack</h3>
+        <table>
+          <tr><th>구분</th><th>기술</th><th>선택 이유</th></tr>
+          <tr><td>프레임워크</td><td>Next.js 15 (App Router)</td><td>파일 라우팅 · React 19 · Vercel 호환</td></tr>
+          <tr><td>언어</td><td>TypeScript</td><td>API 응답 · DB 스키마 타입 안정성</td></tr>
+          <tr><td>스타일</td><td>Tailwind CSS 4</td><td>빠른 UI · 다크 테마</td></tr>
+          <tr><td>애니 데이터</td><td>Jikan API v4</td><td>API 키 불필요 · MAL 메타데이터</td></tr>
+          <tr><td>DB</td><td>Supabase (PostgreSQL + RLS)</td><td>관리형 Postgres · 빠른 프로토타이핑</td></tr>
+          <tr><td>배포</td><td>Vercel</td><td>Git push 자동 배포 · Static Export</td></tr>
+        </table>
+      </section>
+
+      <section id="architecture">
+        <h3>4. 아키텍처</h3>
+        <div class="diagram">
+          <div class="diagram-label">시스템 구성</div>
+          <pre class="mermaid">
+flowchart TB
+  subgraph Client["브라우저 · Next.js Static Export"]
+    Pages["App Router Pages"]
+    JikanLib["lib/jikan.ts"]
+    SupaLib["lib/supabase.ts"]
+    ApiLib["lib/api.ts"]
+  end
+
+  subgraph External["외부 서비스"]
+    Jikan["Jikan API\nMyAnimeList"]
+    Supabase["Supabase\nPostgreSQL"]
+  end
+
+  subgraph Deploy["배포"]
+    GitHub["GitHub push"]
+    Vercel["Vercel CDN"]
+  end
+
+  GitHub --> Vercel
+  Vercel --> Client
+  Pages --> JikanLib
+  Pages --> ApiLib
+  ApiLib --> SupaLib
+  JikanLib -->|"목록/검색/상세"| Jikan
+  SupaLib -->|"리뷰 CRUD"| Supabase
+          </pre>
+        </div>
+        <table>
+          <tr><th>데이터</th><th>출처</th><th>DB 저장</th></tr>
+          <tr><td>애니 제목·포스터·줄거리·장르·MAL 평점</td><td>Jikan API</td><td>X (실시간)</td></tr>
+          <tr><td>사용자 리뷰</td><td>Supabase</td><td>O</td></tr>
+          <tr><td>애니 식별자</td><td>MyAnimeList <code>mal_id</code></td><td>O (리뷰에 포함)</td></tr>
+        </table>
+        <p class="muted">
+          메타데이터 중복 저장을 피하고, 리뷰 목록 속도를 위해 <code>anime_title</code>·<code>anime_image</code>만 비정규화합니다.
+        </p>
+      </section>
+
+      <section id="decisions">
+        <h3>5. 핵심 설계 결정</h3>
+        <div class="card-grid">
+          <div class="card">
+            <strong>Static Export</strong>
+            <span><code>output: "export"</code> — 서버 없이 CDN 서빙, 데이터는 클라이언트 fetch</span>
+          </div>
+          <div class="card">
+            <strong>mal_id 단일 키</strong>
+            <span>애니 테이블 제거 후 MAL ID로 Jikan·리뷰를 연결</span>
+          </div>
+          <div class="card">
+            <strong>동적 라우트</strong>
+            <span><code>/anime/view?id=</code> + vercel rewrite — export에서 <code>[id]</code> 사전 생성 불가 대응</span>
+          </div>
+          <div class="card">
+            <strong>레이트 리밋</strong>
+            <span>검색 500ms 디바운스 · 요청 취소 · 실패 시 graceful degradation</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="database">
+        <h3>6. 데이터베이스</h3>
+        <div class="diagram">
+          <div class="diagram-label">ERD · reviews only</div>
+          <pre class="mermaid">
+erDiagram
+  reviews {
+    uuid id PK
+    integer mal_id
+    text anime_title
+    text anime_image
+    text author_name
+    integer rating
+    text title
+    text content
+    timestamptz created_at
+  }
+          </pre>
+        </div>
+        <p>
+          <code>anime</code> 테이블 없음 — 애니 메타데이터의 Single Source of Truth는 Jikan입니다.
+          RLS는 MVP에서 SELECT/INSERT 공개, 이후 Auth 연동 시 <code>authenticated</code>로 전환 가능하도록 설계했습니다.
+        </p>
+        <table>
+          <tr><th>인덱스</th><th>용도</th></tr>
+          <tr><td><code>reviews_mal_id_idx</code></td><td>애니 상세 리뷰 조회</td></tr>
+          <tr><td><code>reviews_created_at_idx</code></td><td>최신 리뷰 정렬</td></tr>
+        </table>
+      </section>
+
+      <section id="pages">
+        <h3>7. 페이지 구성</h3>
+        <table>
+          <tr><th>경로</th><th>설명</th><th>데이터</th></tr>
+          <tr><td><code>/</code></td><td>인기 애니 + 최신 리뷰</td><td>Jikan + Supabase</td></tr>
+          <tr><td><code>/anime</code></td><td>목록 · 검색 · 더 보기</td><td>Jikan</td></tr>
+          <tr><td><code>/anime/view?id=</code></td><td>상세 · MAL/커뮤니티 평점</td><td>Jikan + Supabase</td></tr>
+          <tr><td><code>/reviews</code></td><td>전체 리뷰</td><td>Supabase</td></tr>
+          <tr><td><code>/write</code></td><td>애니 검색 → 리뷰 작성</td><td>Jikan + Supabase</td></tr>
+        </table>
+      </section>
+
+      <section id="structure">
+        <h3>8. 디렉터리</h3>
+<pre><code>ani-review/
+├── src/
+│   ├── app/                 # App Router 페이지
+│   ├── components/          # AnimeCard, ReviewCard, StarRating …
+│   ├── lib/                 # jikan · supabase · api · utils
+│   └── types/
+├── supabase/schema.sql      # 스키마 + RLS
+├── next.config.ts           # Static Export
+└── vercel.json              # rewrite · 보안 헤더
+</code></pre>
+      </section>
+
+      <section id="deploy">
+        <h3>9. 배포</h3>
+        <div class="diagram">
+          <div class="diagram-label">CI · 배포 흐름</div>
+          <pre class="mermaid">
+flowchart LR
+  A[코드 수정] --> B[git push main]
+  B --> C[Vercel 빌드]
+  C --> D["out/ Static"]
+  D --> E["*.vercel.app"]
+          </pre>
+        </div>
+        <table>
+          <tr><th>항목</th><th>값</th></tr>
+          <tr><td>Framework</td><td>Next.js</td></tr>
+          <tr><td>Build</td><td><code>npm run build</code></td></tr>
+          <tr><td>Output</td><td><code>out</code></td></tr>
+          <tr><td>Env</td><td><code>NEXT_PUBLIC_SUPABASE_URL</code> · <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td></tr>
+        </table>
+      </section>
+
+      <section id="highlights">
+        <h3>10. 하이라이트</h3>
+        <div class="card-grid">
+          <div class="card"><strong>하이브리드 데이터</strong><span>메타는 API · 리뷰만 DB로 범위 최소화</span></div>
+          <div class="card"><strong>서버리스 정적화</strong><span>Static Export로 운영 비용·백엔드 부담 제거</span></div>
+          <div class="card"><strong>ID 일관성</strong><span>mal_id로 외부 API와 리뷰 연결</span></div>
+          <div class="card"><strong>실서비스 UX</strong><span>디바운스 · 빈/로딩 상태 · 한국어 제목</span></div>
+        </div>
+      </section>
+
+      <footer>doobeom Portfolio · pages/ani-review · Frontend</footer>
+    </div>
+  </div>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+  <script src="../assets/js/toc.js" defer></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/nav.js" defer></script>
+</body>
+</html>

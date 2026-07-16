@@ -11,5 +11,6 @@ window.PORTFOLIOS = [
   { id: "db-market-android", file: "pages/db-market-android.html", label: "마켓 Android", group: "mobile", desc: "두범마켓 Android", icon: "android" },
   { id: "db-market-ios", file: "pages/db-market-ios.html", label: "마켓 iOS", group: "mobile", desc: "두범마켓 iOS", icon: "apple" },
   { id: "review-scraper", file: "pages/app-review-scraper.html", label: "리뷰 스크래퍼", group: "mobile", desc: "앱 스토어 리뷰 수집", icon: "review" },
+  { id: "ani-review", file: "pages/ani-review.html", label: "Ani Review", group: "frontend", desc: "Jikan · Supabase 애니 리뷰 웹앱", icon: "web" },
   { id: "cat-vs-dog", file: "pages/cat-vs-dog.html", label: "Cat vs Dog", group: "ml", desc: "CNN 이미지 이진 분류", icon: "ml" }
 ];

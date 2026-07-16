@@ -205,7 +205,7 @@
         <div class="landing-brand">doobeom</div>
         <h1>포트폴리오</h1>
         <p class="lead">
-          IaC·CI/CD·자동화 인프라, 모바일 앱 아키텍처, ML 실험을 정리한 문서모음입니다.
+          IaC·CI/CD·자동화 인프라, 웹·모바일 앱, ML 실험을 정리한 문서모음입니다.
           카드를 선택하거나 상단 탭으로 각 프로젝트를 바로 열 수 있습니다.
         </p>
 
@@ -224,6 +224,11 @@
           <div class="cards" id="cards-qa"></div>
         </section>
 
+        <section class="card-group" data-group="frontend">
+          <div class="group-label">Frontend</div>
+          <div class="cards" id="cards-frontend"></div>
+        </section>
+
         <section class="card-group" data-group="mobile">
           <div class="group-label">Mobile</div>
           <div class="cards" id="cards-mobile"></div>
@@ -239,7 +244,7 @@
     <iframe class="viewer hidden" id="viewer" title="포트폴리오 뷰어"></iframe>
   </div>
 
-  <script src="assets/js/catalog.js?v=20260715c"></script>
+  <script src="assets/js/catalog.js?v=20260716b"></script>
   <script>
     (function () {
       var PORTFOLIOS = window.PORTFOLIOS || [];
@@ -266,7 +271,9 @@
         review:
           '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 3z"/><path d="M8 9h8M8 13h5"/></svg>',
         ml:
-          '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="8" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="12" cy="16" r="2"/><path d="M8 8h8M7.5 9.5l3.5 5M16.5 9.5l-3.5 5"/></svg>'
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="8" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="12" cy="16" r="2"/><path d="M8 8h8M7.5 9.5l3.5 5M16.5 9.5l-3.5 5"/></svg>',
+        web:
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>'
       };
 
       var tabList = document.getElementById("tab-list");
@@ -276,6 +283,7 @@
         infra: document.getElementById("cards-infra"),
         ci: document.getElementById("cards-ci"),
         qa: document.getElementById("cards-qa"),
+        frontend: document.getElementById("cards-frontend"),
         mobile: document.getElementById("cards-mobile"),
         ml: document.getElementById("cards-ml")
       };
@@ -284,6 +292,7 @@
         var group = item.group;
         // 캐시된 옛 catalog 호환
         if (QA_IDS[item.id]) return "qa";
+        if (group === "web") return "frontend";
         if (group === "doobeom") {
           group = CI_IDS[item.id] ? "ci" : "infra";
         }
